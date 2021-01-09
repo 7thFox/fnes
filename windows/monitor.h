@@ -14,8 +14,8 @@ class Monitor
 {
 public:
     Monitor(
-        Cpu6502 *cpu,
-        Rom *rom,
+        components::Cpu6502 *cpu,
+        components::Rom *rom,
         uint8_t *clk, int *cycle_count,
         uint16_t *address_bus, uint8_t *data_bus);
     ~Monitor();
@@ -32,12 +32,12 @@ private:
 
     static char FLAG_NAMES[];
     WINDOW *win_data;
-    Cpu6502 *cpu;
+    components::Cpu6502 *cpu;
     uint16_t *address_bus;
     uint8_t *data_bus;
 
     WINDOW *win_inst;
-    Rom *rom;
+    components::Rom *rom;
 
     WINDOW *win_status;
 

@@ -6,120 +6,123 @@
 #include <functional>
 #include <iostream>
 
-struct _Cpu6502_state
+namespace components
 {
-    _Cpu6502_state(std::function<_Cpu6502_state *()> nextstate)
+    struct _Cpu6502_state
     {
-        this->nextstate = nextstate;
-    }
-    std::function<_Cpu6502_state *()> nextstate;
-    _Cpu6502_state *operator()()
+        _Cpu6502_state(std::function<_Cpu6502_state *()> nextstate)
+        {
+            this->nextstate = nextstate;
+        }
+        std::function<_Cpu6502_state *()> nextstate;
+        _Cpu6502_state *operator()()
+        {
+            auto next = nextstate();
+            return next;
+        }
+    };
+
+    enum AddressingMode
     {
-        auto next = nextstate();
-        return next;
-    }
-};
+        A,    // Accumulator
+        abs,  // absolute
+        absX, // absolute, X-indexed
+        absY, // absolute, Y-indexed
+        imm,  // immediate
+        impl, // implied
+        ind,  // indirect
+        Xind, // X-indexed, indirect
+        indY, // indirect, Y-indexed
+        rel,  // relative
+        zpg,  // zeropage
+        zpgX, // zeropage, X-indexed
+        zpgY, // zeropage, Y-indexed
+    };
 
-enum AddressingMode
-{
-    A,    // Accumulator
-    abs,  // absolute
-    absX, // absolute, X-indexed
-    absY, // absolute, Y-indexed
-    imm,  // immediate
-    impl, // implied
-    ind,  // indirect
-    Xind, // X-indexed, indirect
-    indY, // indirect, Y-indexed
-    rel,  // relative
-    zpg,  // zeropage
-    zpgX, // zeropage, X-indexed
-    zpgY, // zeropage, Y-indexed
-};
-
-struct InstructionMetadata
-{
-    InstructionMetadata(std::string mnemonic,
-                        AddressingMode addr_mode,
-                        uint8_t cycles)
+    struct InstructionMetadata
     {
-        this->mnemonic = mnemonic;
-        this->addr_mode = addr_mode;
-        this->cycles = cycles;
-    }
-    std::string mnemonic;
-    AddressingMode addr_mode;
-    uint8_t cycles;
-};
+        InstructionMetadata(std::string mnemonic,
+                            AddressingMode addr_mode,
+                            uint8_t cycles)
+        {
+            this->mnemonic = mnemonic;
+            this->addr_mode = addr_mode;
+            this->cycles = cycles;
+        }
+        std::string mnemonic;
+        AddressingMode addr_mode;
+        uint8_t cycles;
+    };
 
-class Cpu6502
-{
-public:
-    static InstructionMetadata *metadata[];
+    class Cpu6502
+    {
+    public:
+        static InstructionMetadata metadata[];
 
-    Cpu6502(uint16_t *addr, uint8_t *data);
-    ~Cpu6502();
+        Cpu6502(uint16_t *addr, uint8_t *data);
+        ~Cpu6502();
 
-    void power_on();
-    void set_clk(int sig);
-    void set_resb_(int sig);
+        void power_on();
+        void set_clk(int sig);
+        void set_resb_(int sig);
 
-    uint8_t get_a();
-    uint8_t get_x();
-    uint8_t get_y();
-    uint8_t get_p();
-    uint8_t get_s();
-    uint16_t get_pc();
+        uint8_t get_a();
+        uint8_t get_x();
+        uint8_t get_y();
+        uint8_t get_p();
+        uint8_t get_s();
+        uint16_t get_pc();
 
-private:
-    void clk_rising();
-    void clk_falling();
+    private:
+        void clk_rising();
+        void clk_falling();
 
-    // _Cpu6502_state state();
-    _Cpu6502_state *state;
+        // _Cpu6502_state state();
+        _Cpu6502_state *state;
 
-    // internal registers
-    uint8_t a;
-    uint8_t x;
-    uint8_t y;
-    uint8_t p;
-    uint8_t s;
-    uint16_t pc;
+        // internal registers
+        uint8_t a;
+        uint8_t x;
+        uint8_t y;
+        uint8_t p;
+        uint8_t s;
+        uint16_t pc;
 
-    uint8_t inst[8];
+        uint8_t inst[8];
 
-    uint16_t *address; // 4-19 ->
-    uint8_t *data;     // 21-28 <->
+        uint16_t *address; // 4-19 ->
+        uint8_t *data;     // 21-28 <->
 
-    uint8_t emu_cycles;
+        uint8_t emu_cycles;
 
-    // pinout
-    // uint8_t ad1 : 1;   // 1 ->
-    // uint8_t ad2 : 1;   // 2 ->
-    uint8_t resb_ : 1; // 3 <-
-    uint8_t clk : 1;   // 29 <-
-    // uint8_t tst : 1;   // 30 <-
-    // uint8_t m2 : 1;    // 31 ->
-    // uint8_t irqb_ : 1; // 32 <-
-    // uint8_t nmib_ : 1; // 33 <-
-    // uint8_t rwb : 1;   // 34 ->
-    // uint8_t oe2_ : 1;  // 35 ->
-    // uint8_t oe1_ : 1;  // 36 ->
-    // uint8_t out2 : 1;  // 37 ->
-    // uint8_t out1 : 1;  // 38 ->
-    // uint8_t out0 : 1;  // 39 ->
-    uint8_t vcc : 1; // 39 ->
+        // pinout
+        // uint8_t ad1 : 1;   // 1 ->
+        // uint8_t ad2 : 1;   // 2 ->
+        uint8_t resb_ : 1; // 3 <-
+        uint8_t clk : 1;   // 29 <-
+        // uint8_t tst : 1;   // 30 <-
+        // uint8_t m2 : 1;    // 31 ->
+        // uint8_t irqb_ : 1; // 32 <-
+        // uint8_t nmib_ : 1; // 33 <-
+        // uint8_t rwb : 1;   // 34 ->
+        // uint8_t oe2_ : 1;  // 35 ->
+        // uint8_t oe1_ : 1;  // 36 ->
+        // uint8_t out2 : 1;  // 37 ->
+        // uint8_t out1 : 1;  // 38 ->
+        // uint8_t out0 : 1;  // 39 ->
+        uint8_t vcc : 1; // 39 ->
 
-    // state helpers
-    _Cpu6502_state *state_wait_cycles(int ncycles, _Cpu6502_state *continue_with);
-    // states
-    _Cpu6502_state *state_power_off();
-    _Cpu6502_state *state_power_on_dirty();
-    _Cpu6502_state *state_reset_hold();
+        // state helpers
+        _Cpu6502_state *state_wait_cycles(int ncycles, _Cpu6502_state *continue_with);
+        // states
+        _Cpu6502_state *state_power_off();
+        _Cpu6502_state *state_power_on_dirty();
+        _Cpu6502_state *state_reset_hold();
 
-    _Cpu6502_state *state_begin_fetch();
-    _Cpu6502_state *state_fetch_first_inst_byte();
+        _Cpu6502_state *state_begin_fetch();
+        _Cpu6502_state *state_fetch_first_inst_byte();
 
-    _Cpu6502_state *state_hlt();
-};
+        _Cpu6502_state *state_hlt();
+    };
+}
 #endif

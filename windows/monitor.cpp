@@ -6,8 +6,8 @@
 char Monitor::FLAG_NAMES[] = {'C', 'Z', 'I', 'D', 's', 's', 'V', 'N'};
 
 Monitor::Monitor(
-    Cpu6502 *cpu,
-    Rom *rom,
+    components::Cpu6502 *cpu,
+    components::Rom *rom,
     uint8_t *clk, int *cycle_count,
     uint16_t *address_bus, uint8_t *data_bus)
 {
@@ -114,12 +114,12 @@ void Monitor::draw_inst()
     {
         char str[64];
         wclear(this->win_inst);
-        int curline = ((LINES - REGISTER_ROWS) / 8) - 1;
+        // int curline = ((LINES - REGISTER_ROWS) / 8) - 1;
 
+        int inst = this->cpu->get_pc(); // - curline;
         for (int i = 0; i < LINES - REGISTER_ROWS - 7; i++)
         {
-            int inst = this->cpu->get_pc() + i - curline;
-            if (i == curline)
+            if (i == 0)
             {
                 mvwaddch(this->win_inst, i + 1, 1, ACS_RARROW);
                 wattron(this->win_inst, COLOR_PAIR(ATTR_BLUE_HIGHLIGHT));
@@ -127,7 +127,8 @@ void Monitor::draw_inst()
 
             if (inst >= 0x4020 && inst <= 0xFFFF)
             {
-                sprintf(str, "0x%02x", this->rom->debug_get_at_addr(inst));
+                inst += this->rom->debug_get_at_addr(inst, str);
+                // sprintf(str, "0x%02x", );
                 mvwaddstr(this->win_inst, i + 1, 2, str);
             }
             else
@@ -135,7 +136,7 @@ void Monitor::draw_inst()
                 mvwaddch(this->win_inst, i + 1, 2, '.');
             }
 
-            if (i == curline)
+            if (i == 0)
             {
                 wattroff(this->win_inst, COLOR_PAIR(ATTR_BLUE_HIGHLIGHT));
             }
@@ -149,11 +150,9 @@ void Monitor::set_status(std::string str)
 {
     if (this->win_status != NULL)
     {
-        // wclear(this->win_status);
         mvwaddstr(this->win_status, 1, 2, str.c_str());
         wclrtoeol(this->win_status);
         mvwaddch(this->win_status, 1, COLS - 1, ACS_VLINE);
-        // box(this->win_status, 0, 0);
         wrefresh(this->win_status);
     }
 }
@@ -161,7 +160,6 @@ void Monitor::set_status(std::string str)
 void Monitor::step()
 {
     this->set_status("Step: <space> \tCommand Mode: c");
-    // return;
     char ch;
     while (1)
     {

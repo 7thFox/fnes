@@ -27,8 +27,8 @@ int main()
 
     uint8_t data_bus;
     uint16_t address_bus;
-    Cpu6502 *cpu = new Cpu6502(&address_bus, &data_bus);
-    Rom *rom = new Rom(image, &address_bus, &data_bus);
+    components::Cpu6502 *cpu = new components::Cpu6502(&address_bus, &data_bus);
+    components::Rom *rom = new components::Rom(image, &address_bus, &data_bus);
 
     uint8_t clk = 0;
     int cycles = 0;
