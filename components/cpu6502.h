@@ -8,6 +8,7 @@
 
 namespace components
 {
+    class Cpu6502;
     struct _Cpu6502_state
     {
         _Cpu6502_state(std::function<_Cpu6502_state *()> nextstate)
@@ -41,17 +42,47 @@ namespace components
 
     struct InstructionMetadata
     {
+        InstructionMetadata(){
+            this->mnemonic = "___";
+            this->addr_mode = AddressingMode::impl;
+        }
+        
         InstructionMetadata(std::string mnemonic,
                             AddressingMode addr_mode,
-                            uint8_t cycles)
+                            int(Cpu6502::*fnop)())
         {
             this->mnemonic = mnemonic;
             this->addr_mode = addr_mode;
-            this->cycles = cycles;
+            this->fnop = fnop;
         }
         std::string mnemonic;
         AddressingMode addr_mode;
         uint8_t cycles;
+        int (Cpu6502::*fnop)();
+
+        uint8_t nbytes() {
+
+            switch (this->addr_mode)
+            {
+                case AddressingMode::A:
+                case AddressingMode::impl:
+                    return 1;
+                case AddressingMode::zpg:
+                case AddressingMode::imm:
+                case AddressingMode::Xind:
+                case AddressingMode::indY:
+                case AddressingMode::rel:
+                case AddressingMode::zpgX:
+                case AddressingMode::zpgY:
+                    return 2;
+                case AddressingMode::abs:
+                case AddressingMode::absX:
+                case AddressingMode::absY:
+                case AddressingMode::ind:
+                    return 3;
+            }
+            return -1;
+        }
     };
 
     class Cpu6502
@@ -63,7 +94,7 @@ namespace components
         ~Cpu6502();
 
         void power_on();
-        void set_clk(int sig);
+        void set_clk();
         void set_resb_(int sig);
 
         uint8_t get_a();
@@ -71,7 +102,9 @@ namespace components
         uint8_t get_y();
         uint8_t get_p();
         uint8_t get_s();
+        uint16_t get_inst_start();
         uint16_t get_pc();
+        bool get_is_fetching();
 
     private:
         void clk_rising();
@@ -88,18 +121,20 @@ namespace components
         uint8_t s;
         uint16_t pc;
 
+        bool is_fetching;
+
+        uint16_t inst_start;
+        InstructionMetadata inst_meta;
         uint8_t inst[8];
 
         uint16_t *address; // 4-19 ->
         uint8_t *data;     // 21-28 <->
 
-        uint8_t emu_cycles;
-
         // pinout
         // uint8_t ad1 : 1;   // 1 ->
         // uint8_t ad2 : 1;   // 2 ->
         uint8_t resb_ : 1; // 3 <-
-        uint8_t clk : 1;   // 29 <-
+        // uint8_t clk : 1;   // 29 <-
         // uint8_t tst : 1;   // 30 <-
         // uint8_t m2 : 1;    // 31 ->
         // uint8_t irqb_ : 1; // 32 <-
@@ -119,10 +154,74 @@ namespace components
         _Cpu6502_state *state_power_on_dirty();
         _Cpu6502_state *state_reset_hold();
 
-        _Cpu6502_state *state_begin_fetch();
-        _Cpu6502_state *state_fetch_first_inst_byte();
+        _Cpu6502_state *state_fetch_op();
+        _Cpu6502_state *state_fetch_lo();
+        _Cpu6502_state *state_fetch_lo_hi();
+        _Cpu6502_state *state_fetch_hi();
+
+        _Cpu6502_state *state_op_exec();
+        _Cpu6502_state *state_prep_fetch();
 
         _Cpu6502_state *state_hlt();
+
+        // ops
+        int op____();
+        int op_adc();
+        int op_and();
+        int op_asl();
+        int op_bcc();
+        int op_bcs();
+        int op_beq();
+        int op_bit();
+        int op_bmi();
+        int op_bne();
+        int op_bpl();
+        int op_brk();
+        int op_bvc();
+        int op_bvs();
+        int op_clc();
+        int op_cld();
+        int op_cli();
+        int op_clv();
+        int op_cmp();
+        int op_cpx();
+        int op_cpy();
+        int op_dec();
+        int op_dex();
+        int op_dey();
+        int op_eor();
+        int op_inc();
+        int op_inx();
+        int op_iny();
+        int op_jmp();
+        int op_jsr();
+        int op_lda();
+        int op_ldx();
+        int op_ldy();
+        int op_lsr();
+        int op_nop();
+        int op_ora();
+        int op_pha();
+        int op_php();
+        int op_pla();
+        int op_plp();
+        int op_rol();
+        int op_ror();
+        int op_rti();
+        int op_rts();
+        int op_sbc();
+        int op_sec();
+        int op_sed();
+        int op_sei();
+        int op_sta();
+        int op_stx();
+        int op_sty();
+        int op_tax();
+        int op_tay();
+        int op_tsx();
+        int op_txa();
+        int op_txs();
+        int op_tya();    
     };
 }
 #endif

@@ -1,19 +1,19 @@
 #include "monitor.h"
 
 #define REGISTER_ROWS 9
-#define RIGHT_COL_WIDTH 23
+#define RIGHT_COL_WIDTH 48
 
 char Monitor::FLAG_NAMES[] = {'C', 'Z', 'I', 'D', 's', 's', 'V', 'N'};
 
 Monitor::Monitor(
     components::Cpu6502 *cpu,
     components::Rom *rom,
-    uint8_t *clk, int *cycle_count,
+    int *cycle_count,
     uint16_t *address_bus, uint8_t *data_bus)
 {
     this->cpu = cpu;
     this->rom = rom;
-    this->clk = clk;
+    // this->clk = clk;
     this->cycle_count = cycle_count;
     this->address_bus = address_bus;
     this->data_bus = data_bus;
@@ -28,6 +28,8 @@ Monitor::Monitor(
     init_pair(ATTR_RED_WITH_NORMAL, COLOR_RED, -1);
 #define ATTR_BLUE_HIGHLIGHT 2
     init_pair(ATTR_BLUE_HIGHLIGHT, COLOR_BLUE, -1);
+#define ATTR_CYAN 3
+    init_pair(ATTR_CYAN, COLOR_CYAN, -1);
 
     this->win_clock = newwin(3, RIGHT_COL_WIDTH, 0, COLS - RIGHT_COL_WIDTH);
     this->win_data = newwin(REGISTER_ROWS + 2, RIGHT_COL_WIDTH, 2, COLS - RIGHT_COL_WIDTH);
@@ -102,7 +104,19 @@ void Monitor::draw_clock()
         char str[64];
         sprintf(str, " Cycle: %d", *this->cycle_count);
         mvwaddstr(this->win_clock, 1, 1, str);
-        waddch(this->win_clock, (*this->clk) == 1 ? ACS_UARROW : ACS_DARROW);
+        // waddch(this->win_clock, (*this->clk) == 1 ? ACS_UARROW : ACS_DARROW);
+
+        if (this->cpu->get_is_fetching())
+        {
+            wattron(this->win_clock, COLOR_PAIR(ATTR_RED_WITH_NORMAL));
+            waddstr(this->win_clock, "  fetch!");
+            wattroff(this->win_clock, COLOR_PAIR(ATTR_RED_WITH_NORMAL));
+        }
+        else {
+
+            waddstr(this->win_clock, "        ");
+        }
+
         box_draw(this->win_clock, DOWN, 0, 0, 0, 0);
         wrefresh(this->win_clock);
     }
@@ -112,33 +126,45 @@ void Monitor::draw_inst()
 {
     if (this->win_inst != NULL)
     {
-        char str[64];
+        char strdis[64];
+        char strbytes[64];
+        char straddr[64];
         wclear(this->win_inst);
         // int curline = ((LINES - REGISTER_ROWS) / 8) - 1;
 
-        int inst = this->cpu->get_pc(); // - curline;
+        int inst = this->cpu->get_inst_start();
         for (int i = 0; i < LINES - REGISTER_ROWS - 7; i++)
         {
-            if (i == 0)
-            {
-                mvwaddch(this->win_inst, i + 1, 1, ACS_RARROW);
-                wattron(this->win_inst, COLOR_PAIR(ATTR_BLUE_HIGHLIGHT));
-            }
+            sprintf(straddr, "$%04x  ", inst);
+
+            mvwaddstr(this->win_inst, i + 1, 2, straddr);
 
             if (inst >= 0x4020 && inst <= 0xFFFF)
             {
-                inst += this->rom->debug_get_at_addr(inst, str);
-                // sprintf(str, "0x%02x", );
-                mvwaddstr(this->win_inst, i + 1, 2, str);
+                inst += this->rom->debug_get_at_addr(inst, strbytes, strdis);
+
+                // if (i == 0)
+                // {
+                //     mvwaddch(this->win_inst, i + 1, 1, ACS_RARROW);
+                // }
+
+                wattron(this->win_inst, COLOR_PAIR(ATTR_CYAN));
+                waddstr(this->win_inst, strbytes);
+                wattroff(this->win_inst, COLOR_PAIR(ATTR_CYAN));
+
+                if (i == 0)
+                {
+                    wattron(this->win_inst, COLOR_PAIR(ATTR_BLUE_HIGHLIGHT));
+                }
+                waddstr(this->win_inst, strdis);
+                if (i == 0)
+                {
+                    wattroff(this->win_inst, COLOR_PAIR(ATTR_BLUE_HIGHLIGHT));
+                }
             }
             else
             {
-                mvwaddch(this->win_inst, i + 1, 2, '.');
-            }
-
-            if (i == 0)
-            {
-                wattroff(this->win_inst, COLOR_PAIR(ATTR_BLUE_HIGHLIGHT));
+                waddch(this->win_inst, '.');
             }
         }
         box_draw(this->win_inst, UP | DOWN, 0, 0, ACS_BTEE, 0);

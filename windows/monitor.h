@@ -16,7 +16,7 @@ public:
     Monitor(
         components::Cpu6502 *cpu,
         components::Rom *rom,
-        uint8_t *clk, int *cycle_count,
+        int *cycle_count,
         uint16_t *address_bus, uint8_t *data_bus);
     ~Monitor();
 
@@ -27,7 +27,7 @@ public:
 
 private:
     WINDOW *win_clock;
-    uint8_t *clk;
+    // uint8_t *clk;
     int *cycle_count;
 
     static char FLAG_NAMES[];

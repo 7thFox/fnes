@@ -17,23 +17,23 @@ int main()
     uint8_t prg[100] = {
         0xA9, 0x14,       // LDA 0x14
         0x69, 0x43,       // ADC
-        0x4C, 0x40, 0x24, // JMP $4024 (HLT)
+        0x4C, 0x24, 0x40, // JMP $4024 (HLT)
     };
     uint8_t image[0xBFE0];
     memcpy(image, prg, 100);
     image[0xFFFC - 0x4020] = 0x4C; // JMP $4020 (start of ROM)
-    image[0xFFFD - 0x4020] = 0x40;
-    image[0xFFFE - 0x4020] = 0x20;
+    image[0xFFFD - 0x4020] = 0x20;
+    image[0xFFFE - 0x4020] = 0x40;
 
     uint8_t data_bus;
     uint16_t address_bus;
     components::Cpu6502 *cpu = new components::Cpu6502(&address_bus, &data_bus);
     components::Rom *rom = new components::Rom(image, &address_bus, &data_bus);
 
-    uint8_t clk = 0;
+    // uint8_t clk = 0;
     int cycles = 0;
 #ifndef DEBUG_OUT_NO_NCURSES
-    Monitor *monitor = new Monitor(cpu, rom, &clk, &cycles, &address_bus, &data_bus);
+    Monitor *monitor = new Monitor(cpu, rom, &cycles, &address_bus, &data_bus);
 #endif
 
     signal(SIGINT, intHandle);
@@ -41,25 +41,25 @@ int main()
     cpu->set_resb_(0);
     while (running)
     {
-        clk = (clk + 1) & 1;
+        // clk = (clk + 1) & 1;
 
-        if (clk == 1)
-        {
-            cycles++;
-        }
+        // if (clk == 1)
+        // {
+        cycles++;
+        // }
 
         if (cycles == 3)
         {
             cpu->set_resb_(1);
         }
         // clock
-        rom->set_clk(clk);
-        cpu->set_clk(clk);
+        rom->set_clk();
+        cpu->set_clk();
 #ifndef DEBUG_OUT_NO_NCURSES
         monitor->refresh();
         monitor->step();
 #else
-        std::cout << (int)clk << std::endl;
+        // std::cout << (int)clk << std::endl;
         std::cin.ignore();
 #endif
     }
