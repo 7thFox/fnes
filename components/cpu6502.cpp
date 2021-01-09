@@ -97,45 +97,139 @@ _Cpu6502_state *Cpu6502::state_fetch_op(){
     this->pc++;
     this->inst_meta = Cpu6502::metadata[this->inst[0]];
     auto nbytes = inst_meta.nbytes();
-    if (nbytes < 2){
-        this->is_fetching = false;
-        return new _Cpu6502_state(std::bind(&Cpu6502::state_op_exec, this));
+    if (nbytes < 2)
+    {
+        return this->check_indirect();
     }
 
     *this->address = this->pc;
+    this->pc++;
     if (nbytes == 2){
         return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_lo, this));
     }
     return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_lo_hi, this));
 }
+
 _Cpu6502_state *Cpu6502::state_fetch_lo(){
     this->inst[1] = *this->data;
-    this->pc++;
-    this->is_fetching = false;
-    return new _Cpu6502_state(std::bind(&Cpu6502::state_op_exec, this));
+    return this->check_indirect();
 }
+
 _Cpu6502_state *Cpu6502::state_fetch_lo_hi(){
     this->inst[1] = *this->data;
-    this->pc++;
     *this->address = this->pc;
+    this->pc++;
     return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_hi, this));
 }
+
 _Cpu6502_state *Cpu6502::state_fetch_hi(){
     this->inst[2] = *this->data;
-    this->pc++;
-    this->is_fetching = false;
+    return this->check_indirect();
+}
+
+_Cpu6502_state *Cpu6502::state_fetch_lo_hi_indirect(){
+    this->inst[1] = *this->data;
+    // page boundry bug
+    *this->address = (((*this->address & 0xFF) + 1) % 0xFF) | (this->inst[2] << 8);
+    return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_hi_indirect, this));
+}
+
+_Cpu6502_state *Cpu6502::state_fetch_hi_indirect() {
+    this->inst[2] = *this->data;
+    this->param16 = this->inst[1] | (this->inst[2] << 8);
+    if (this->inst_meta.addr_mode == AddressingMode::indY)
+    {
+        this->param16 += this->y;
+        if (this->param16 & 0xFF00 != this->inst[2] << 8)
+        {
+            return new _Cpu6502_state(std::bind(&Cpu6502::state_wait_cycles, this, 1, 
+                new _Cpu6502_state(std::bind(&Cpu6502::state_op_exec, this))));
+        }
+    }
     return new _Cpu6502_state(std::bind(&Cpu6502::state_op_exec, this));
+}
+_Cpu6502_state *Cpu6502::check_indirect(){
+    switch (this->inst_meta.addr_mode)
+    {
+        case AddressingMode::A:
+            this->param8 = this->a;
+            break;
+        case AddressingMode::imm:
+            this->param8 = this->inst[1];
+            break;
+        case AddressingMode::impl:
+            break;            
+        case AddressingMode::zpg:
+            this->param16 = this->inst[1];
+            break;
+        case AddressingMode::zpgX:
+            this->param16 = (this->inst[1] + this->x) & 0xFF;
+            break;
+        case AddressingMode::zpgY:
+            this->param16 = (this->inst[1] + this->y) & 0xFF;
+            break;
+        case AddressingMode::abs:
+            this->param16 = this->inst[1] | (this->inst[2] << 8);
+            break;
+        case AddressingMode::absX:
+            this->param16 = (this->inst[1] | (this->inst[2] << 8)) + x;
+            if (this->param16 & 0xFF00 != this->inst[2] << 8)
+            {
+                return new _Cpu6502_state(std::bind(&Cpu6502::check_fetch, this));
+            }
+            break;
+        case AddressingMode::absY:
+            this->param16 = (this->inst[1] | (this->inst[2] << 8)) + y;
+            if (this->param16 & 0xFF00 != this->inst[2] << 8)
+            {
+                return new _Cpu6502_state(std::bind(&Cpu6502::check_fetch, this));
+            }
+            break;
+        case AddressingMode::ind:
+            *this->address = this->inst[1] | (this->inst[2] << 8);
+            return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_lo_hi_indirect, this));
+        case AddressingMode::Xind:
+            *this->address = (this->inst[1] + this->x) & 0xFF;
+            return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_lo_hi_indirect, this));
+        case AddressingMode::indY:
+            *this->address = (this->inst[1] + this->x) & 0xFF;
+            return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_lo_hi_indirect, this));
+        case AddressingMode::rel:
+            this->param16 = this->inst[1];
+            if (this->param16 & 0x08)
+                this->param16 |= 0xFF00;
+            this->param16 += this->pc;
+            break;
+    }
+    return this->check_fetch();
+}
+
+_Cpu6502_state *Cpu6502::check_fetch(){
+    if (!this->inst_meta.has_fetch())
+    {
+        this->is_fetching = false;
+        return this->state_op_exec();
+    }
+
+    *this->address = this->param16;
+    return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_addr, this));
+}
+_Cpu6502_state *Cpu6502::state_fetch_addr()
+{
+    this->param8 = *this->data;
+    this->is_fetching = false;
+    return this->state_op_exec();
 }
 
 _Cpu6502_state *Cpu6502::state_op_exec(){
     auto cycles = std::bind(this->inst_meta.fnop, this)();
     if (cycles > 0)
     {
-        auto fetch = new _Cpu6502_state(std::bind(&Cpu6502::state_prep_fetch, this));
+        auto fetch_next_op = new _Cpu6502_state(std::bind(&Cpu6502::state_prep_fetch, this));
         if (cycles > 1){
-            return new _Cpu6502_state(std::bind(&Cpu6502::state_wait_cycles, this, cycles - 1, fetch));
+            return new _Cpu6502_state(std::bind(&Cpu6502::state_wait_cycles, this, cycles - 1, fetch_next_op));
         }
-        return fetch;
+        return fetch_next_op;
     }
     return this->state_prep_fetch();
 }
@@ -152,8 +246,8 @@ _Cpu6502_state *Cpu6502::state_hlt(){
     return new _Cpu6502_state(std::bind(&Cpu6502::state_hlt, this));
 }
 
-int Cpu6502::op____() { }
-int Cpu6502::op_adc() { }
+int Cpu6502::op____() { return 0; }
+int Cpu6502::op_adc() { this->a += this->param8; return 0; }
 int Cpu6502::op_and() { }
 int Cpu6502::op_asl() { }
 int Cpu6502::op_bcc() { }
@@ -178,16 +272,12 @@ int Cpu6502::op_dex() { }
 int Cpu6502::op_dey() { }
 int Cpu6502::op_eor() { }
 int Cpu6502::op_inc() { }
-int Cpu6502::op_inx() { }
+int Cpu6502::op_inx() { this->x++; return 0; }
 int Cpu6502::op_iny() { }
-int Cpu6502::op_jmp() 
-{
-    this->pc = this->inst[1] | (this->inst[2] << 8);
-    return 0;
-}
+int Cpu6502::op_jmp() { this->pc = this->param16; return 0; }
 int Cpu6502::op_jsr() { }
-int Cpu6502::op_lda() { }
-int Cpu6502::op_ldx() { }
+int Cpu6502::op_lda() { this->a = this->param8; return 0; }
+int Cpu6502::op_ldx() { this->x = this->param8; return 0; }
 int Cpu6502::op_ldy() { }
 int Cpu6502::op_lsr() { }
 int Cpu6502::op_nop() { }

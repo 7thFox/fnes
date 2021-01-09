@@ -61,7 +61,6 @@ namespace components
         int (Cpu6502::*fnop)();
 
         uint8_t nbytes() {
-
             switch (this->addr_mode)
             {
                 case AddressingMode::A:
@@ -82,6 +81,16 @@ namespace components
                     return 3;
             }
             return -1;
+        }
+
+        bool has_fetch() 
+        {
+            if (this->addr_mode == AddressingMode::imm ||
+                this->addr_mode == AddressingMode::impl ||
+                this->mnemonic == "JMP"){
+                return false;
+            }
+            return true;
         }
     };
 
@@ -126,6 +135,10 @@ namespace components
         uint16_t inst_start;
         InstructionMetadata inst_meta;
         uint8_t inst[8];
+        union {
+            uint8_t param8;// hi byte
+            uint16_t param16;
+        };
 
         uint16_t *address; // 4-19 ->
         uint8_t *data;     // 21-28 <->
@@ -158,6 +171,11 @@ namespace components
         _Cpu6502_state *state_fetch_lo();
         _Cpu6502_state *state_fetch_lo_hi();
         _Cpu6502_state *state_fetch_hi();
+        _Cpu6502_state *check_indirect();
+        _Cpu6502_state *state_fetch_lo_hi_indirect();
+        _Cpu6502_state *state_fetch_hi_indirect();
+        _Cpu6502_state *check_fetch();
+        _Cpu6502_state *state_fetch_addr();
 
         _Cpu6502_state *state_op_exec();
         _Cpu6502_state *state_prep_fetch();
