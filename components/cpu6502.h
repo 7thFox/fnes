@@ -3,9 +3,28 @@
 
 #include "stdint.h"
 #include <stdlib.h>
+#include <functional>
+#include <iostream>
+
+struct _Cpu6502_state
+{
+    _Cpu6502_state(std::function<_Cpu6502_state *()> nextstate)
+    {
+        this->nextstate = nextstate;
+    }
+    std::function<_Cpu6502_state *()> nextstate;
+    _Cpu6502_state *operator()()
+    {
+        auto next = nextstate();
+        return next;
+    }
+};
 
 class Cpu6502
 {
+private:
+    static int foo[];
+
 public:
     Cpu6502(uint16_t *addr, uint8_t *data);
     ~Cpu6502();
@@ -24,6 +43,9 @@ public:
 private:
     void clk_rising();
     void clk_falling();
+
+    // _Cpu6502_state state();
+    _Cpu6502_state *state;
 
     // internal registers
     uint8_t a;
@@ -55,6 +77,19 @@ private:
     // uint8_t out2 : 1;  // 37 ->
     // uint8_t out1 : 1;  // 38 ->
     // uint8_t out0 : 1;  // 39 ->
+    uint8_t vcc : 1; // 39 ->
+
+    // state helpers
+    _Cpu6502_state *state_wait_cycles(int ncycles, _Cpu6502_state *continue_with);
+    // states
+    _Cpu6502_state *state_power_off();
+    _Cpu6502_state *state_power_on_dirty();
+    _Cpu6502_state *state_reset_hold();
+
+    _Cpu6502_state *state_begin_fetch();
+    _Cpu6502_state *state_fetch_first_inst_byte();
+
+    _Cpu6502_state *state_hlt();
 };
 
 #endif

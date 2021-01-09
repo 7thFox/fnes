@@ -10,6 +10,8 @@ void intHandle(int);
 #include "unistd.h"
 #include <iostream>
 
+//#define DEBUG_OUT_NO_NCURSES
+
 int main()
 {
     uint8_t prg[100] = {
@@ -30,7 +32,9 @@ int main()
 
     uint8_t clk = 0;
     int cycles = 0;
+#ifndef DEBUG_OUT_NO_NCURSES
     Monitor *monitor = new Monitor(cpu, rom, &clk, &cycles, &address_bus, &data_bus);
+#endif
 
     signal(SIGINT, intHandle);
     cpu->power_on();
@@ -51,18 +55,21 @@ int main()
         // clock
         rom->set_clk(clk);
         cpu->set_clk(clk);
-
+#ifndef DEBUG_OUT_NO_NCURSES
         monitor->refresh();
         monitor->step();
-
-        // sleep(1);
+#else
+        std::cout << (int)clk << std::endl;
+        std::cin.ignore();
+#endif
     }
 
+#ifndef DEBUG_OUT_NO_NCURSES
     monitor->end();
-
+    delete monitor;
+#endif
     delete cpu;
     delete rom;
-    delete monitor;
 }
 
 void intHandle(int sig)
