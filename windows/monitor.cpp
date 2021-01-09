@@ -3,36 +3,25 @@
 #define REGISTER_ROWS 9
 #define RIGHT_COL_WIDTH 23
 
-typedef int _box_intersects;
-const int UP = 1 << 0;
-const int LEFT = 1 << 1;
-const int RIGHT = 1 << 2;
-const int DOWN = 1 << 3;
+char Monitor::FLAG_NAMES[] = {'C', 'Z', 'I', 'D', 's', 's', 'V', 'N'};
 
-void monitor_draw_data(Monitor *monitor);
-void monitor_draw_clock(Monitor *monitor);
-void monitor_draw_inst(Monitor *monitor);
-int monitor_command_mode(Monitor *monitor);
-void monitor_set_status(Monitor *monitor, std::string str);
-void box_draw(WINDOW *win, _box_intersects intersect, chtype ul, chtype ur, chtype ll, chtype lr);
-
-Monitor *monitor_init(
+Monitor::Monitor(
     Cpu6502 *cpu,
     Rom *rom,
     uint8_t *clk, int *cycle_count,
     uint16_t *address_bus, uint8_t *data_bus)
 {
-    Monitor *monitor = (Monitor *)malloc(sizeof(Monitor));
-    monitor->cpu = cpu;
-    monitor->rom = rom;
-    monitor->clk = clk;
-    monitor->cycle_count = cycle_count;
-    monitor->address_bus = address_bus;
-    monitor->data_bus = data_bus;
+    this->cpu = cpu;
+    this->rom = rom;
+    this->clk = clk;
+    this->cycle_count = cycle_count;
+    this->address_bus = address_bus;
+    this->data_bus = data_bus;
 
     initscr();
     curs_set(0);
     noecho();
+    raw();
     start_color();
     use_default_colors();
 #define ATTR_RED_WITH_NORMAL 1
@@ -40,135 +29,139 @@ Monitor *monitor_init(
 #define ATTR_BLUE_HIGHLIGHT 2
     init_pair(ATTR_BLUE_HIGHLIGHT, COLOR_BLUE, -1);
 
-    monitor->win_clock = newwin(3, RIGHT_COL_WIDTH, 0, COLS - RIGHT_COL_WIDTH);
-    monitor->win_data = newwin(REGISTER_ROWS + 2, RIGHT_COL_WIDTH, 2, COLS - RIGHT_COL_WIDTH);
-    monitor->win_inst = newwin(LINES - REGISTER_ROWS - 5, RIGHT_COL_WIDTH, REGISTER_ROWS + 3, COLS - RIGHT_COL_WIDTH);
+    this->win_clock = newwin(3, RIGHT_COL_WIDTH, 0, COLS - RIGHT_COL_WIDTH);
+    this->win_data = newwin(REGISTER_ROWS + 2, RIGHT_COL_WIDTH, 2, COLS - RIGHT_COL_WIDTH);
+    this->win_inst = newwin(LINES - REGISTER_ROWS - 5, RIGHT_COL_WIDTH, REGISTER_ROWS + 3, COLS - RIGHT_COL_WIDTH);
 
-    monitor->win_status = newwin(3, COLS, LINES - 3, 0);
+    this->win_status = newwin(3, COLS, LINES - 3, 0);
 
-    refresh();
-
-    return monitor;
+    wrefresh(stdscr);
 }
 
-void monitor_refresh(Monitor *monitor)
+Monitor::~Monitor() {}
+
+void Monitor::refresh()
 {
-    box_draw(monitor->win_status, 0, 0, 0, 0, 0);
-    wrefresh(monitor->win_status); // Must be first
-    monitor_draw_clock(monitor);
-    monitor_draw_data(monitor);
-    monitor_draw_inst(monitor);
+    box_draw(this->win_status, 0, 0, 0, 0, 0);
+    wrefresh(this->win_status); // Must be first
+    this->draw_clock();
+    this->draw_data();
+    this->draw_inst();
 
     // DEBUG:
-    char str[256];
-    sprintf(str, "INST: 0x%02x", monitor->cpu->inst[0]);
-    mvaddstr(2, 2, str);
+    // char str[256];
+    // sprintf(str, "INST: 0x%02x", this->cpu->inst[0]);
+    // mvaddstr(2, 2, str);
 
-    refresh();
+    wrefresh(stdscr);
 }
 
-char FLAG_NAMES[] = {'C', 'Z', 'I', 'D', 's', 's', 'V', 'N'};
-void monitor_draw_data(Monitor *monitor)
+void Monitor::draw_data()
 {
-    if (monitor->win_data == NULL || monitor->cpu == NULL)
+    if (this->win_data == NULL || this->cpu == NULL)
     {
         return;
     }
 
-    mvwaddstr(monitor->win_data, 1, 3, "P:");
+    mvwaddstr(this->win_data, 1, 3, "P:");
     for (uint8_t n = 0; n < 8; n++)
     {
         uint8_t shift = 1 << n;
-        if ((monitor->cpu->p & (shift)) == shift)
+        if ((this->cpu->get_p() & (shift)) == shift)
         {
-            wattron(monitor->win_data, COLOR_PAIR(ATTR_RED_WITH_NORMAL));
+            wattron(this->win_data, COLOR_PAIR(ATTR_RED_WITH_NORMAL));
         }
-        mvwaddch(monitor->win_data, 1, 6 + 2 * n, FLAG_NAMES[n]);
-        wattroff(monitor->win_data, COLOR_PAIR(ATTR_RED_WITH_NORMAL));
+        mvwaddch(this->win_data, 1, 6 + 2 * n, FLAG_NAMES[n]);
+        wattroff(this->win_data, COLOR_PAIR(ATTR_RED_WITH_NORMAL));
     }
     char buffer[RIGHT_COL_WIDTH];
-    sprintf(buffer, " A: 0x%02x %10u", monitor->cpu->a, monitor->cpu->a);
-    mvwaddstr(monitor->win_data, 2, 2, buffer);
-    sprintf(buffer, " X: 0x%02x %10u", monitor->cpu->x, monitor->cpu->x);
-    mvwaddstr(monitor->win_data, 3, 2, buffer);
-    sprintf(buffer, " Y: 0x%02x %10u", monitor->cpu->y, monitor->cpu->y);
-    mvwaddstr(monitor->win_data, 4, 2, buffer);
-    sprintf(buffer, "PC: 0x%04x %8u", monitor->cpu->pc, monitor->cpu->pc);
-    mvwaddstr(monitor->win_data, 5, 2, buffer);
-    sprintf(buffer, " S: 0x%02x %10u", monitor->cpu->s, monitor->cpu->s);
-    mvwaddstr(monitor->win_data, 6, 2, buffer);
+    sprintf(buffer, " A: 0x%02x %10u", this->cpu->get_a(), this->cpu->get_a());
+    mvwaddstr(this->win_data, 2, 2, buffer);
+    sprintf(buffer, " X: 0x%02x %10u", this->cpu->get_x(), this->cpu->get_x());
+    mvwaddstr(this->win_data, 3, 2, buffer);
+    sprintf(buffer, " Y: 0x%02x %10u", this->cpu->get_y(), this->cpu->get_y());
+    mvwaddstr(this->win_data, 4, 2, buffer);
+    sprintf(buffer, "PC: 0x%04x %8u", this->cpu->get_pc(), this->cpu->get_pc());
+    mvwaddstr(this->win_data, 5, 2, buffer);
+    sprintf(buffer, " S: 0x%02x %10u", this->cpu->get_s(), this->cpu->get_s());
+    mvwaddstr(this->win_data, 6, 2, buffer);
 
-    sprintf(buffer, "ADDR: 0x%04x %6u", *monitor->address_bus, *monitor->address_bus);
-    mvwaddstr(monitor->win_data, 8, 2, buffer);
-    sprintf(buffer, "DATA: 0x%02x %8u", *monitor->data_bus, *monitor->data_bus);
-    mvwaddstr(monitor->win_data, 9, 2, buffer);
+    sprintf(buffer, "ADDR: 0x%04x %6u", *this->address_bus, *this->address_bus);
+    mvwaddstr(this->win_data, 8, 2, buffer);
+    sprintf(buffer, "DATA: 0x%02x %8u", *this->data_bus, *this->data_bus);
+    mvwaddstr(this->win_data, 9, 2, buffer);
 
-    box_draw(monitor->win_data, UP | DOWN, 0, 0, 0, 0);
-    wrefresh(monitor->win_data);
+    box_draw(this->win_data, UP | DOWN, 0, 0, 0, 0);
+    wrefresh(this->win_data);
 }
 
-void monitor_draw_clock(Monitor *monitor)
+void Monitor::draw_clock()
 {
-    if (monitor->win_clock != NULL)
+    if (this->win_clock != NULL)
     {
         char str[64];
-        sprintf(str, " Cycle: %d", *monitor->cycle_count);
-        mvwaddstr(monitor->win_clock, 1, 1, str);
-        waddch(monitor->win_clock, (*monitor->clk) == 1 ? ACS_UARROW : ACS_DARROW);
-        box_draw(monitor->win_clock, DOWN, 0, 0, 0, 0);
-        wrefresh(monitor->win_clock);
+        sprintf(str, " Cycle: %d", *this->cycle_count);
+        mvwaddstr(this->win_clock, 1, 1, str);
+        waddch(this->win_clock, (*this->clk) == 1 ? ACS_UARROW : ACS_DARROW);
+        box_draw(this->win_clock, DOWN, 0, 0, 0, 0);
+        wrefresh(this->win_clock);
     }
 }
 
-void monitor_draw_inst(Monitor *monitor)
+void Monitor::draw_inst()
 {
-    if (monitor->win_inst != NULL)
+    if (this->win_inst != NULL)
     {
         char str[64];
-        wclear(monitor->win_inst);
+        wclear(this->win_inst);
         int curline = ((LINES - REGISTER_ROWS) / 8) - 1;
 
         for (int i = 0; i < LINES - REGISTER_ROWS - 7; i++)
         {
-            int inst = monitor->cpu->pc + i - curline;
+            int inst = this->cpu->get_pc() + i - curline;
             if (i == curline)
             {
-                mvwaddch(monitor->win_inst, i + 1, 1, ACS_RARROW);
-                wattron(monitor->win_inst, COLOR_PAIR(ATTR_BLUE_HIGHLIGHT));
+                mvwaddch(this->win_inst, i + 1, 1, ACS_RARROW);
+                wattron(this->win_inst, COLOR_PAIR(ATTR_BLUE_HIGHLIGHT));
             }
 
             if (inst >= 0x4020 && inst <= 0xFFFF)
             {
-                sprintf(str, "0x%02x", monitor->rom->image[inst - 0x4020]);
-                mvwaddstr(monitor->win_inst, i + 1, 2, str);
+                sprintf(str, "0x%02x", this->rom->debug_get_at_addr(inst));
+                mvwaddstr(this->win_inst, i + 1, 2, str);
             }
+            else
+            {
+                mvwaddch(this->win_inst, i + 1, 2, '.');
+            }
+
             if (i == curline)
             {
-                wattroff(monitor->win_inst, COLOR_PAIR(ATTR_BLUE_HIGHLIGHT));
+                wattroff(this->win_inst, COLOR_PAIR(ATTR_BLUE_HIGHLIGHT));
             }
         }
-        box_draw(monitor->win_inst, UP | DOWN, 0, 0, ACS_BTEE, 0);
-        wrefresh(monitor->win_inst);
+        box_draw(this->win_inst, UP | DOWN, 0, 0, ACS_BTEE, 0);
+        wrefresh(this->win_inst);
     }
 }
 
-void monitor_set_status(Monitor *monitor, std::string str)
+void Monitor::set_status(std::string str)
 {
-    if (monitor->win_status != NULL)
+    if (this->win_status != NULL)
     {
-        // wclear(monitor->win_status);
-        mvwaddstr(monitor->win_status, 1, 2, str.c_str());
-        wclrtoeol(monitor->win_status);
-        mvwaddch(monitor->win_status, 1, COLS - 1, ACS_VLINE);
-        // box(monitor->win_status, 0, 0);
-        wrefresh(monitor->win_status);
+        // wclear(this->win_status);
+        mvwaddstr(this->win_status, 1, 2, str.c_str());
+        wclrtoeol(this->win_status);
+        mvwaddch(this->win_status, 1, COLS - 1, ACS_VLINE);
+        // box(this->win_status, 0, 0);
+        wrefresh(this->win_status);
     }
 }
 
-void monitor_step(Monitor *monitor)
+void Monitor::step()
 {
-    monitor_set_status(monitor, "Step: <space> \tCommand Mode: c");
-    raw();
+    this->set_status("Step: <space> \tCommand Mode: c");
+    // return;
     char ch;
     while (1)
     {
@@ -184,17 +177,17 @@ void monitor_step(Monitor *monitor)
             return;
         case 'c':
         case 'C':
-            if (monitor_command_mode(monitor) == 1)
+            if (this->enter_command_mode() == 1)
             {
                 raise(SIGINT);
                 return;
             }
-            monitor_set_status(monitor, "Step: <space> \tCommand Mode: c");
+            this->set_status("Step: <space> \tCommand Mode: c");
         }
     }
 }
 
-int monitor_command_mode(Monitor *monitor)
+int Monitor::enter_command_mode()
 {
 #define CMD_MODE_LINES 5
 #define CMD_MODE_COLS 25
@@ -202,7 +195,7 @@ int monitor_command_mode(Monitor *monitor)
     scrollok(interactive, true);
     box(interactive, 0, 0);
 
-    monitor_set_status(monitor, "Exit: <esc>");
+    this->set_status("Exit: <esc>");
     mvwaddstr(interactive, 1, 1, "Enter Command Bytes: ");
 
     echo();
@@ -237,7 +230,7 @@ int monitor_command_mode(Monitor *monitor)
                 wrefresh(interactive);
                 delwin(interactive);
                 noecho();
-                monitor_refresh(monitor);
+                this->refresh();
                 return 1;
             }
             else if (ch == 0x1b) // ESC
@@ -246,7 +239,7 @@ int monitor_command_mode(Monitor *monitor)
                 wrefresh(interactive);
                 delwin(interactive);
                 noecho();
-                monitor_refresh(monitor);
+                this->refresh();
                 return 0;
             }
             else if (ch == 0x0a) // Enter
@@ -304,45 +297,33 @@ int monitor_command_mode(Monitor *monitor)
         wclrtoeol(interactive);
 
         // TODO:
-        if (monitor->cpu != NULL)
+        if (this->cpu != NULL)
         {
             // cpu->a++;
             // cpu->a++;
-            monitor_draw_data(monitor);
+            this->draw_data();
         }
     }
 }
 
-void monitor_end(Monitor *monitor)
+void Monitor::end()
 {
     endwin();
 }
 
-void box_draw(WINDOW *win, _box_intersects intersect, chtype ul, chtype ur, chtype ll, chtype lr)
+void Monitor::box_draw(WINDOW *win, _box_intersects intersect, chtype ul, chtype ur, chtype ll, chtype lr)
 {
     if (ul == 0)
-        ul = ((intersect & UP) == UP) && ((intersect & LEFT) == LEFT) ? ACS_PLUS
-                                                                      : ((intersect & UP) == UP) ? ACS_LTEE
-                                                                                                 : ((intersect & LEFT) == LEFT) ? ACS_TTEE
-                                                                                                                                : ACS_ULCORNER;
+        ul = ((intersect & UP) == UP) && ((intersect & LEFT) == LEFT) ? ACS_PLUS : ((intersect & UP) == UP) ? ACS_LTEE : ((intersect & LEFT) == LEFT) ? ACS_TTEE : ACS_ULCORNER;
 
     if (ur == 0)
-        ur = ((intersect & UP) == UP) && ((intersect & RIGHT) == RIGHT) ? ACS_PLUS
-                                                                        : ((intersect & UP) == UP) ? ACS_RTEE
-                                                                                                   : ((intersect & RIGHT) == RIGHT) ? ACS_TTEE
-                                                                                                                                    : ACS_URCORNER;
+        ur = ((intersect & UP) == UP) && ((intersect & RIGHT) == RIGHT) ? ACS_PLUS : ((intersect & UP) == UP) ? ACS_RTEE : ((intersect & RIGHT) == RIGHT) ? ACS_TTEE : ACS_URCORNER;
 
     if (ll == 0)
-        ll = ((intersect & DOWN) == DOWN) && ((intersect & LEFT) == LEFT) ? ACS_PLUS
-                                                                          : ((intersect & DOWN) == DOWN) ? ACS_LTEE
-                                                                                                         : ((intersect & LEFT) == LEFT) ? ACS_BTEE
-                                                                                                                                        : ACS_LLCORNER;
+        ll = ((intersect & DOWN) == DOWN) && ((intersect & LEFT) == LEFT) ? ACS_PLUS : ((intersect & DOWN) == DOWN) ? ACS_LTEE : ((intersect & LEFT) == LEFT) ? ACS_BTEE : ACS_LLCORNER;
 
     if (lr == 0)
-        lr = ((intersect & DOWN) == DOWN) && ((intersect & RIGHT) == RIGHT) ? ACS_PLUS
-                                                                            : ((intersect & DOWN) == DOWN) ? ACS_RTEE
-                                                                                                           : ((intersect & RIGHT) == RIGHT) ? ACS_BTEE
-                                                                                                                                            : ACS_LRCORNER;
+        lr = ((intersect & DOWN) == DOWN) && ((intersect & RIGHT) == RIGHT) ? ACS_PLUS : ((intersect & DOWN) == DOWN) ? ACS_RTEE : ((intersect & RIGHT) == RIGHT) ? ACS_BTEE : ACS_LRCORNER;
 
     wborder(win,
             ACS_VLINE,

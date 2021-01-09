@@ -4,10 +4,27 @@
 #include "stdint.h"
 #include <stdlib.h>
 
-typedef struct cpu6502_s Cpu6502;
-
-struct cpu6502_s
+class Cpu6502
 {
+public:
+    Cpu6502(uint16_t *addr, uint8_t *data);
+    ~Cpu6502();
+
+    void power_on();
+    void set_clk(int sig);
+    void set_resb_(int sig);
+
+    uint8_t get_a();
+    uint8_t get_x();
+    uint8_t get_y();
+    uint8_t get_p();
+    uint8_t get_s();
+    uint16_t get_pc();
+
+private:
+    void clk_rising();
+    void clk_falling();
+
     // internal registers
     uint8_t a;
     uint8_t x;
@@ -39,18 +56,5 @@ struct cpu6502_s
     // uint8_t out1 : 1;  // 38 ->
     // uint8_t out0 : 1;  // 39 ->
 };
-
-// setup
-Cpu6502 *cpu_new(uint16_t *addr, uint8_t *data);
-void cpu_power_on(Cpu6502 *cpu);
-// void cpu_addr_connect(Cpu6502 *cpu, uint16_t *addr);
-// void cpu_data_connect(Cpu6502 *cpu, uint8_t *data);
-
-// uint16_t *cpu_addr(Cpu6502 *cpu);
-// uint8_t *cpu_data(Cpu6502 *cpu);
-
-// inputs
-void cpu_clk(Cpu6502 *cpu, int sig);
-void cpu_resb_(Cpu6502 *cpu, int sig);
 
 #endif

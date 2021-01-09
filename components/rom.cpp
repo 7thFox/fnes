@@ -1,23 +1,31 @@
 #include "rom.h"
 
-Rom *rom_new(uint8_t *image, uint16_t *addr, uint8_t *data)
+Rom::Rom(uint8_t *image, uint16_t *addr, uint8_t *data)
 {
-    Rom *rom = (Rom *)malloc(sizeof(Rom));
-    rom->image = image;
-    rom->address = addr;
-    rom->data = data;
-    return rom;
+    this->image = image;
+    this->address = addr;
+    this->data = data;
 }
 
-void rom_clk(Rom *rom, int sig)
+Rom::~Rom() {}
+
+void Rom::set_clk(int sig)
 {
     uint8_t newClk = sig & 1;
-    if (newClk == 1 && rom->clk == 0) // Rising-edge
+    if (newClk == 1 && this->clk == 0) // Rising-edge
     {
-        if (*rom->address > 0x4020)
+        if (*this->address >= 0x4020)
         {
-            (*rom->data) = rom->image[(*rom->address) - 0x4020];
+            (*this->data) = this->image[(*this->address) - 0x4020];
         }
     }
-    rom->clk = newClk;
+    this->clk = newClk;
+}
+uint8_t Rom::debug_get_at_addr(uint16_t addr)
+{
+    if (addr >= 0x4020 && addr <= 0xFFFF)
+    {
+        return this->image[addr - 0x4020];
+    }
+    return 0;
 }

@@ -1,69 +1,71 @@
 #include "cpu6502.h"
 
-void _cpu_clk_resb(Cpu6502 *cpu);
-void _cpu_clk_rising(Cpu6502 *cpu);
-void _cpu_clk_falling(Cpu6502 *cpu);
-
-Cpu6502 *cpu_new(uint16_t *addr, uint8_t *data)
+Cpu6502::Cpu6502(uint16_t *addr, uint8_t *data)
 {
-    Cpu6502 *cpu = (Cpu6502 *)malloc(sizeof(Cpu6502));
-    cpu->address = addr;
-    cpu->data = data;
-    return cpu;
+    this->address = addr;
+    this->data = data;
 }
+Cpu6502::~Cpu6502() {}
 
-void cpu_clk(Cpu6502 *cpu, int sig)
+void Cpu6502::set_clk(int sig)
 {
     uint8_t clk_next = sig & 1;
-    if (cpu->resb_ == 1)
+    if (this->resb_ == 1)
     {
-        int falling = cpu->clk == 1 && clk_next == 0;
+        int falling = this->clk == 1 && clk_next == 0;
 
-        if (cpu->emu_cycles > 0)
+        if (this->emu_cycles > 0)
         {
             if (falling) // rising-edge (and not emulating cycles taken)
             {
-                cpu->emu_cycles--;
+                this->emu_cycles--;
             }
         }
         else if (falling)
         {
-            _cpu_clk_falling(cpu);
+            this->clk_falling();
         }
         else
         {
 
-            _cpu_clk_rising(cpu);
+            this->clk_rising();
         }
     }
-    cpu->clk = clk_next;
+    this->clk = clk_next;
 }
-void _cpu_clk_rising(Cpu6502 *cpu)
+void Cpu6502::clk_rising()
 {
-    cpu->inst[0] = *cpu->data;
-}
-
-void _cpu_clk_falling(Cpu6502 *cpu)
-{
-    (*cpu->address) = cpu->pc;
+    this->inst[0] = *this->data;
 }
 
-void cpu_power_on(Cpu6502 *cpu)
+void Cpu6502::clk_falling()
 {
-    cpu->emu_cycles = 0;
-
-    cpu->p = 0x34;
-    cpu->a = cpu->x = cpu->y = 0x00;
-    cpu->s = 0xfd;
+    (*this->address) = this->pc;
 }
 
-void cpu_resb_(Cpu6502 *cpu, int sig)
+void Cpu6502::power_on()
 {
-    cpu->resb_ = sig & 1;
-    if (cpu->resb_)
+    this->emu_cycles = 0;
+
+    this->p = 0x34;
+    this->a = this->x = this->y = 0x00;
+    this->s = 0xfd;
+}
+
+void Cpu6502::set_resb_(int sig)
+{
+    this->resb_ = sig & 1;
+    if (this->resb_)
     {
-        cpu->s -= 3;
-        cpu->pc = 0xFFFC;
+        this->s -= 3;
+        this->pc = 0xFFFC;
         //cpu->irq = true;
     }
 }
+
+uint8_t Cpu6502::get_a() { return this->a; }
+uint8_t Cpu6502::get_x() { return this->x; }
+uint8_t Cpu6502::get_y() { return this->y; }
+uint8_t Cpu6502::get_p() { return this->p; }
+uint8_t Cpu6502::get_s() { return this->s; }
+uint16_t Cpu6502::get_pc() { return this->pc; }

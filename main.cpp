@@ -7,6 +7,8 @@ int running = 1;
 void intHandle(int);
 
 #include <stdlib.h>
+#include "unistd.h"
+#include <iostream>
 
 int main()
 {
@@ -23,16 +25,16 @@ int main()
 
     uint8_t data_bus;
     uint16_t address_bus;
-    Cpu6502 *cpu = cpu_new(&address_bus, &data_bus);
-    Rom *rom = rom_new(image, &address_bus, &data_bus);
+    Cpu6502 *cpu = new Cpu6502(&address_bus, &data_bus);
+    Rom *rom = new Rom(image, &address_bus, &data_bus);
 
     uint8_t clk = 0;
     int cycles = 0;
-    Monitor *monitor = monitor_init(cpu, rom, &clk, &cycles, &address_bus, &data_bus);
+    Monitor *monitor = new Monitor(cpu, rom, &clk, &cycles, &address_bus, &data_bus);
 
     signal(SIGINT, intHandle);
-    cpu_power_on(cpu);
-    cpu_resb_(cpu, 0);
+    cpu->power_on();
+    cpu->set_resb_(0);
     while (running)
     {
         clk = (clk + 1) & 1;
@@ -44,21 +46,23 @@ int main()
 
         if (cycles == 3)
         {
-            cpu_resb_(cpu, 1);
+            cpu->set_resb_(1);
         }
         // clock
-        rom_clk(rom, clk);
-        cpu_clk(cpu, clk);
+        rom->set_clk(clk);
+        cpu->set_clk(clk);
 
-        monitor_refresh(monitor);
-        monitor_step(monitor);
+        monitor->refresh();
+        monitor->step();
+
+        // sleep(1);
     }
 
-    monitor_end(monitor);
+    monitor->end();
 
-    free(cpu);
-    free(rom);
-    free(monitor);
+    delete cpu;
+    delete rom;
+    delete monitor;
 }
 
 void intHandle(int sig)
