@@ -20,12 +20,43 @@ struct _Cpu6502_state
     }
 };
 
+enum AddressingMode
+{
+    A,    // Accumulator
+    abs,  // absolute
+    absX, // absolute, X-indexed
+    absY, // absolute, Y-indexed
+    imm,  // immediate
+    impl, // implied
+    ind,  // indirect
+    Xind, // X-indexed, indirect
+    indY, // indirect, Y-indexed
+    rel,  // relative
+    zpg,  // zeropage
+    zpgX, // zeropage, X-indexed
+    zpgY, // zeropage, Y-indexed
+};
+
+struct InstructionMetadata
+{
+    InstructionMetadata(std::string mnemonic,
+                        AddressingMode addr_mode,
+                        uint8_t cycles)
+    {
+        this->mnemonic = mnemonic;
+        this->addr_mode = addr_mode;
+        this->cycles = cycles;
+    }
+    std::string mnemonic;
+    AddressingMode addr_mode;
+    uint8_t cycles;
+};
+
 class Cpu6502
 {
-private:
-    static int foo[];
-
 public:
+    static InstructionMetadata *metadata[];
+
     Cpu6502(uint16_t *addr, uint8_t *data);
     ~Cpu6502();
 
@@ -91,5 +122,4 @@ private:
 
     _Cpu6502_state *state_hlt();
 };
-
 #endif
