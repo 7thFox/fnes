@@ -8,12 +8,13 @@ char Monitor::FLAG_NAMES[] = {'C', 'Z', 'I', 'D', 's', 's', 'V', 'N'};
 Monitor::Monitor(
     components::Cpu6502 *cpu,
     components::Rom *rom,
+    components::Ram *ram,
     int *cycle_count,
     uint16_t *address_bus, uint8_t *data_bus)
 {
     this->cpu = cpu;
     this->rom = rom;
-    // this->clk = clk;
+    this->ram = ram;
     this->cycle_count = cycle_count;
     this->address_bus = address_bus;
     this->data_bus = data_bus;
@@ -49,13 +50,36 @@ void Monitor::refresh()
     this->draw_clock();
     this->draw_data();
     this->draw_inst();
+    this->draw_ram();
 
     // DEBUG:
     // char str[256];
     // sprintf(str, "INST: 0x%02x", this->cpu->inst[0]);
     // mvaddstr(2, 2, str);
+}
 
-    wrefresh(stdscr);
+void Monitor::draw_ram()
+{
+
+    char str[32];
+    //sprintf(str, "%d %d", COLS - RIGHT_COL_WIDTH - 6, (COLS - RIGHT_COL_WIDTH - 6)/(2 * 3));
+    mvwaddstr(stdscr, 1, 1, str);
+
+    int inc = (COLS - RIGHT_COL_WIDTH - 6) / 3;
+    for (int l = 0; l < LINES - 2 - 3; l++){
+        sprintf(str, "$%04x ", l*inc);
+        mvwaddstr(stdscr, 1 + l, 1, str);
+        for (int b = 0; b < inc; b++){
+            if (*this->address_bus == l*inc+b){
+                wattron(stdscr, COLOR_PAIR(ATTR_RED_WITH_NORMAL));
+            }
+            sprintf(str, "%02x ", this->ram->get_byte(l*inc+b));
+            waddstr(stdscr, str);
+            wattroff(stdscr,COLOR_PAIR(ATTR_RED_WITH_NORMAL));
+        }
+    }
+
+        wrefresh(stdscr);
 }
 
 void Monitor::draw_data()
@@ -190,9 +214,6 @@ void Monitor::step()
     while (1)
     {
         ch = getch();
-        char str[8];
-        sprintf(str, "0x%02x", ch);
-        mvaddstr(5, 5, str);
         switch (ch)
         {
         case 0x03:

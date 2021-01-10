@@ -8,6 +8,7 @@
 #include "stdint.h"
 #include "../components/cpu6502.h"
 #include "../components/rom.h"
+#include "../components/ram.h"
 #include <string>
 
 class Monitor
@@ -16,6 +17,7 @@ public:
     Monitor(
         components::Cpu6502 *cpu,
         components::Rom *rom,
+        components::Ram *ram,
         int *cycle_count,
         uint16_t *address_bus, uint8_t *data_bus);
     ~Monitor();
@@ -26,6 +28,8 @@ public:
     void end();
 
 private:
+    components::Ram *ram;
+
     WINDOW *win_clock;
     // uint8_t *clk;
     int *cycle_count;
@@ -50,6 +54,7 @@ private:
     void draw_data();
     void draw_clock();
     void draw_inst();
+    void draw_ram();
     int enter_command_mode();
     void set_status(std::string str);
     void box_draw(WINDOW *win, _box_intersects intersect, chtype ul, chtype ur, chtype ll, chtype lr);

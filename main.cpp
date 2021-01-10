@@ -49,11 +49,12 @@ int main()
     uint16_t address_bus;
     components::Cpu6502 *cpu = new components::Cpu6502(&address_bus, &data_bus);
     components::Rom *rom = new components::Rom(image, &address_bus, &data_bus);
+    components::Ram *ram = new components::Ram(&address_bus, &data_bus);
 
     // uint8_t clk = 0;
     int cycles = 0;
 #ifndef DEBUG_OUT_NO_NCURSES
-    Monitor *monitor = new Monitor(cpu, rom, &cycles, &address_bus, &data_bus);
+    Monitor *monitor = new Monitor(cpu, rom, ram, &cycles, &address_bus, &data_bus);
 #endif
 
     signal(SIGINT, intHandle);
@@ -90,6 +91,7 @@ int main()
 #endif
     delete cpu;
     delete rom;
+    delete ram;
 }
 
 void intHandle(int sig)
