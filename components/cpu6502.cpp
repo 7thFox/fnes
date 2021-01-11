@@ -7,6 +7,7 @@ Cpu6502::Cpu6502(uint16_t *addr, uint8_t *data) {
     this->data = data;
     this->vcc = 0;
     this->is_fetching = false;
+    this->is_testing = false;
     this->state = new _Cpu6502_state(std::bind(&Cpu6502::state_power_off, this));
 }
 
@@ -51,9 +52,31 @@ uint16_t Cpu6502::get_pc() { return this->pc; }
 uint16_t Cpu6502::get_inst_start() { return this->inst_start; }
 bool Cpu6502::get_is_fetching() { return this->is_fetching; }
 
+
+void Cpu6502::test_setup()
+{
+    this->is_testing = true;
+    this->pc = 0xFFFC;
+}
+void Cpu6502::test_start()
+{
+    if (this->state != nullptr){ delete this->state; }
+    this->state = this->state_prep_fetch();
+    this->is_testing = true;// set false by prep_fetch
+}
+bool Cpu6502::test_finished() 
+{ 
+    return !this->is_testing; 
+}
+void Cpu6502::test_set_a(uint8_t x) { if (this->is_testing) this->a = x; }
+void Cpu6502::test_set_x(uint8_t x) { if (this->is_testing) this->x = x; }
+void Cpu6502::test_set_y(uint8_t x) { if (this->is_testing) this->y = x; }
+void Cpu6502::test_set_p(uint8_t x) { if (this->is_testing) this->p = x; }
+void Cpu6502::test_set_s(uint8_t x) { if (this->is_testing) this->s = x; }
+void Cpu6502::test_set_pc(uint16_t x) { if (this->is_testing) this->pc = x; }
+
 _Cpu6502_state *Cpu6502::state_wait_cycles(int ncycles, _Cpu6502_state *continue_with)
 {
-    std::cout << "state_wait_cycles " << ncycles << std::endl;
     if (ncycles == 1)
     {
         return continue_with;
@@ -64,7 +87,6 @@ _Cpu6502_state *Cpu6502::state_wait_cycles(int ncycles, _Cpu6502_state *continue
 // states
 _Cpu6502_state *Cpu6502::state_power_off()
 {
-    std::cout << "state_power_off" << std::endl;
     if (this->vcc)
     {
         return new _Cpu6502_state(std::bind(&Cpu6502::state_power_on_dirty, this));
@@ -74,7 +96,6 @@ _Cpu6502_state *Cpu6502::state_power_off()
 
 _Cpu6502_state *Cpu6502::state_power_on_dirty()
 {
-    std::cout << "state_power_on_dirty" << std::endl;
     if (!this->resb_)
     {
         return new _Cpu6502_state(std::bind(&Cpu6502::state_reset_hold, this));
@@ -84,7 +105,6 @@ _Cpu6502_state *Cpu6502::state_power_on_dirty()
 
 _Cpu6502_state *Cpu6502::state_reset_hold()
 {
-    std::cout << "state_reset_hold" << std::endl;
     if (this->resb_)
     {
         auto cnt = new _Cpu6502_state(std::bind(&Cpu6502::state_prep_fetch, this));
@@ -95,9 +115,10 @@ _Cpu6502_state *Cpu6502::state_reset_hold()
 _Cpu6502_state *Cpu6502::state_fetch_op(){
     this->inst[0] = *this->data;
     this->pc++;
+    this->is_fetching = false;
     this->inst_meta = Cpu6502::metadata[this->inst[0]];
     auto nbytes = inst_meta.nbytes();
-    if (nbytes < 2)
+    if (nbytes == 1)
     {
         return this->check_indirect();
     }
@@ -207,7 +228,6 @@ _Cpu6502_state *Cpu6502::check_indirect(){
 _Cpu6502_state *Cpu6502::check_fetch(){
     if (!this->inst_meta.has_fetch())
     {
-        this->is_fetching = false;
         return this->state_op_exec();
     }
 
@@ -217,7 +237,6 @@ _Cpu6502_state *Cpu6502::check_fetch(){
 _Cpu6502_state *Cpu6502::state_fetch_addr()
 {
     this->param8 = *this->data;
-    this->is_fetching = false;
     return this->state_op_exec();
 }
 
@@ -236,6 +255,7 @@ _Cpu6502_state *Cpu6502::state_op_exec(){
 
 _Cpu6502_state *Cpu6502::state_prep_fetch()
 {
+    this->is_testing = false;
     this->inst_start = this->pc;
     *this->address = this->pc;
     this->is_fetching = true;
@@ -246,6 +266,8 @@ _Cpu6502_state *Cpu6502::state_hlt(){
     return new _Cpu6502_state(std::bind(&Cpu6502::state_hlt, this));
 }
 
+// TODO: Remove when implemented
+#pragma GCC diagnostic ignored "-Wreturn-type"
 int Cpu6502::op____() { return 0; }
 int Cpu6502::op_adc() { this->a += this->param8; return 0; }
 int Cpu6502::op_and() { }
@@ -304,6 +326,7 @@ int Cpu6502::op_txa() { }
 int Cpu6502::op_txs() { }
 int Cpu6502::op_tya() { }
  
+#pragma GCC diagnostic push
 
 
 

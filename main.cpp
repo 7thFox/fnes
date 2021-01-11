@@ -8,11 +8,18 @@ void intHandle(int);
 
 #include <stdlib.h>
 #include "unistd.h"
+#include "tests_instructions.h"
 #include <iostream>
 
 //#define DEBUG_OUT_NO_NCURSES
 
 int main()
+{
+    // run_interactive();
+    test::run_all_instruction_tests(std::cout, false);
+}
+
+void run_interactive()
 {
     uint8_t prg[100] = {
         0xA9, 0x14,       // LDA #$14

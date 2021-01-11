@@ -111,13 +111,23 @@ namespace components
         uint8_t get_y();
         uint8_t get_p();
         uint8_t get_s();
-        uint16_t get_inst_start();
         uint16_t get_pc();
+        uint16_t get_inst_start();
         bool get_is_fetching();
 
+        // For testing only
+        void test_setup();
+        void test_start();
+        bool test_finished();
+        void test_set_a(uint8_t);
+        void test_set_x(uint8_t);
+        void test_set_y(uint8_t);
+        void test_set_p(uint8_t);
+        void test_set_s(uint8_t);
+        void test_set_pc(uint16_t);
+
     private:
-        void clk_rising();
-        void clk_falling();
+        bool is_testing;
 
         // _Cpu6502_state state();
         _Cpu6502_state *state;
