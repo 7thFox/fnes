@@ -105,20 +105,52 @@ namespace test
         return res;
     }
 
+    bool check_flag(components::Cpu6502 *cpu, components::Cpu6502Flags flg, bool set)
+    {
+        return set == ((cpu->get_p() & flg) == flg);
+    }
+
+    // test::TestResult test_ADC_Xind();
+    // test::TestResult test_ADC_abs();
+    // test::TestResult test_ADC_absX();
+    // test::TestResult test_ADC_absY();
+    // test::TestResult test_ADC_imm()
+    // {
+    //     return test_range_8([](uint8_t x) {
+    //         std::unordered_map<uint16_t, uint8_t> mem = {
+    //             {0xFFFC, 0x69},
+    //             {0xFFFD, x},
+    //         };
+    //         return test_inst("test_ADC_imm", &mem, 2, [&](components::Cpu6502 *cpu) {
+    //             return cpu->get_a() == (x + 0x52);
+    //         }, [](components::Cpu6502 *cpu) {
+    //             cpu->test_set_a(0x52);
+    //         });
+    //     });
+    // }
+    // test::TestResult test_ADC_indY();
+    // test::TestResult test_ADC_zpg();
+    // test::TestResult test_ADC_zpgX();
+
     test::TestResult test_LDA_Xind()
     {
         return test_range_8([](uint8_t x) {
+            uint8_t val = x % 7 == 0 ? 0xB5 : // neg 
+                x % 2 ? 0x00 : // zero
+                0x13;// pos
             std::unordered_map<uint16_t, uint8_t> mem = {
                 {0xFFFC, 0xA1},
                 {0xFFFD, 0x53},
                 {(0x0053 + x) & 0xFF, 0x84},
                 {(0x0053 + x + 1) & 0xFF, 0x21},
-                {0x2184, 0x77}
+                {0x2184, val}
             };
             return test_inst(
                 "test_LDA_Xind", &mem, 6,
                 [&](components::Cpu6502 *cpu) {
-                    return cpu->get_a() == 0x77;
+                    return cpu->get_a() == val
+                        && check_flag(cpu, components::Cpu6502Flags::N, val & 0x80 == 0x80)
+                        && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
                 },
                 [&](components::Cpu6502 *cpu) {
                     cpu->test_set_x(x);
@@ -128,32 +160,42 @@ namespace test
     test::TestResult test_LDA_abs()
     {
         return test_range_16([](uint16_t x) {
+            uint8_t val = x % 7 == 0 ? 0xEE : // neg 
+                x % 2 ? 0x00 : // zero
+                0x69;// pos
             std::unordered_map<uint16_t, uint8_t> mem = 
             {
                 {0xFFFC, 0xAD},
                 {0xFFFD, x & 0xFF},
                 {0xFFFE, x >> 8},
-                {x, 0x69},
+                {x, val},
             };
-            return test_inst("test_LDA_abs", &mem, 4, [](components::Cpu6502 *cpu) {
-                return cpu->get_a() == 0x69;
+            return test_inst("test_LDA_abs", &mem, 4, [&](components::Cpu6502 *cpu) {
+                return cpu->get_a() == val
+                    && check_flag(cpu, components::Cpu6502Flags::N, val & 0x80 == 0x80)
+                    && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
             });
         }, 0x6748, 0x6948);
     }
     test::TestResult test_LDA_absX()
     {
         return test_range_8([](uint8_t x) {
+            uint8_t val = x % 7 == 0 ? 0xF0 : // neg 
+                x % 2 ? 0x00 : // zero
+                0x21;// pos
             std::unordered_map<uint16_t, uint8_t> mem = {
                 {0xFFFC, 0xBD},
                 {0xFFFD, 0x74},
                 {0xFFFE, 0x84},
-                {0x8474 + x, 0x21},
+                {0x8474 + x, val},
             };
             return test_inst(
                 "test_LDA_absX", &mem,
                 (0x8474 + x) & 0xFF00 != 0x8400 ? 5 : 4, // add for page boundry
                 [&](components::Cpu6502 *cpu) {
-                    return cpu->get_a() == 0x21;
+                    return cpu->get_a() == val
+                        && check_flag(cpu, components::Cpu6502Flags::N, val & 0x80 == 0x80)
+                        && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
                 },
                 [&](components::Cpu6502 *cpu) {
                     cpu->test_set_x(x);
@@ -163,18 +205,23 @@ namespace test
     test::TestResult test_LDA_absY()
     {
         return test_range_8([](uint8_t x) {
+            uint8_t val = x % 7 == 0 ? 0x88 : // neg 
+                x % 2 ? 0x00 : // zero
+                0x08;// pos
             std::unordered_map<uint16_t, uint8_t> mem = {
                 {0xFFFC, 0xB9},
                 {0xFFFD, 0x99},
                 {0xFFFE, 0x66},
-                {0x6699 + x, 0x88},
+                {0x6699 + x, val},
             };
 
             return test_inst(
                 "test_LDA_absY", &mem,
                 (0x6699 + x) & 0xFF00 != 0x6600 ? 5 : 4, // add for page boundry
                 [&](components::Cpu6502 *cpu) {
-                    return cpu->get_a() == 0x88;
+                    return cpu->get_a() == val
+                        && check_flag(cpu, components::Cpu6502Flags::N, val & 0x80 == 0x80)
+                        && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
                 },
                 [&](components::Cpu6502 *cpu) {
                     cpu->test_set_y(x);
@@ -189,25 +236,32 @@ namespace test
                 {0xFFFD, x},
             };
             return test_inst("test_LDA_imm", &mem, 2, [&](components::Cpu6502 *cpu) {
-                return cpu->get_a() == x;
+                return cpu->get_a() == x
+                    && check_flag(cpu, components::Cpu6502Flags::N, x & 0x80 == 0x80)
+                    && check_flag(cpu, components::Cpu6502Flags::Z, x == 0);
             });
         });
     }
     test::TestResult test_LDA_indY()
     {
         return test_range_8([](uint8_t x) {
+            uint8_t val = x % 7 == 0 ? 0x9E : // neg 
+                x % 2 ? 0x00 : // zero
+                0x33;// pos
             std::unordered_map<uint16_t, uint8_t> mem = {
                 {0xFFFC, 0xB1},
                 {0xFFFD, 0x79},
                 {(0x0079) & 0xFF, 0xC3},
                 {(0x0079 + 1) & 0xFF, 0x44},
-                {0x44C3 + x, 0x9E}
+                {0x44C3 + x, val}
             };
             return test_inst(
                 "test_LDA_indY", &mem, 
                 (0x44C3 + x) & 0xFF00 != 0x4400 ? 6 : 5,
                 [&](components::Cpu6502 *cpu) {
-                    return cpu->get_a() == 0x9E;
+                    return cpu->get_a() == val
+                        && check_flag(cpu, components::Cpu6502Flags::N, val & 0x80 == 0x80)
+                        && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
                 },
                 [&](components::Cpu6502 *cpu) {
                     cpu->test_set_y(x);
@@ -218,28 +272,38 @@ namespace test
     {
         return test_range_8([&](uint8_t x) 
         {
+            uint8_t val = x % 7 == 0 ? 0xCF : // neg 
+                x % 2 ? 0x00 : // zero
+                0x38;// pos
             std::unordered_map<uint16_t, uint8_t> mem = {
                 {0xFFFC, 0xA5},
                 {0xFFFD, x},
-                {x, 0x38},
+                {x, val},
             };
             return test_inst("test_LDA_zpg", &mem, 3, [&](components::Cpu6502 *cpu) {
-                return cpu->get_a() == 0x38;
+                return cpu->get_a() == val
+                    && check_flag(cpu, components::Cpu6502Flags::N, val & 0x80 == 0x80)
+                    && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
             });
         });
     }
     test::TestResult test_LDA_zpgX()
     {
         return test_range_8([](uint8_t x) {
+            uint8_t val = x % 7 == 0 ? 0xFD : // neg 
+                x % 2 ? 0x00 : // zero
+                0x51;// pos
             std::unordered_map<uint16_t, uint8_t> mem = {
                 {0xFFFC, 0xB5},
                 {0xFFFD, 0x37},
-                {(0x0037 + x) & 0xFF, 0xFD},
+                {((0x0037 + x) & 0xFF), val},
             };
             return test_inst(
                 "test_LDA_zpgX", &mem, 4,
                 [&](components::Cpu6502 *cpu) {
-                    return cpu->get_a() == 0xFD;
+                    return cpu->get_a() == val
+                        && check_flag(cpu, components::Cpu6502Flags::N, val & 0x80 == 0x80)
+                        && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
                 },
                 [&](components::Cpu6502 *cpu) {
                     cpu->test_set_x(x);

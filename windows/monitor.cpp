@@ -3,7 +3,7 @@
 #define REGISTER_ROWS 9
 #define RIGHT_COL_WIDTH 48
 
-char Monitor::FLAG_NAMES[] = {'C', 'Z', 'I', 'D', 's', 's', 'V', 'N'};
+char Monitor::FLAG_NAMES[] = {'C', 'Z', 'I', 'D', 'B', 's', 'V', 'N'};
 
 Monitor::Monitor(
     components::Cpu6502 *cpu,

@@ -21,6 +21,8 @@ namespace test
     test::TestResult test_range_8(std::function<test::TestResult(uint8_t)> test_fn, uint8_t lo = 0x00, uint8_t hi = 0xFF);
     test::TestResult test_range_16(std::function<test::TestResult(uint16_t)> test_fn, uint16_t lo = 0x0000, uint16_t hi = 0xFFFF);
 
+    bool check_flag(components::Cpu6502 *cpu, components::Cpu6502Flags flg, bool set);
+
     // test::TestResult test_ADC_Xind();
     // test::TestResult test_ADC_abs();
     // test::TestResult test_ADC_absX();

@@ -42,6 +42,13 @@ void Cpu6502::set_resb_(int sig)
         //cpu->irq = true;
     }
 }
+void Cpu6502::flg_set(bool set, Cpu6502Flags flag)
+{
+    if (set)
+        this->p |= flag;
+    else
+        this->p &= ~flag;
+}
 
 uint8_t Cpu6502::get_a() { return this->a; }
 uint8_t Cpu6502::get_x() { return this->x; }
@@ -301,7 +308,13 @@ int Cpu6502::op_inx() { this->x++; return 0; }
 int Cpu6502::op_iny() { }
 int Cpu6502::op_jmp() { this->pc = this->param16; return 0; }
 int Cpu6502::op_jsr() { }
-int Cpu6502::op_lda() { this->a = this->param8; return 0; }
+int Cpu6502::op_lda() 
+{ 
+    this->a = this->param8;
+    this->flg_set(this->a == 0, Cpu6502Flags::Z);
+    this->flg_set(this->a & 0x80 == 0x80, Cpu6502Flags::N);
+    return 0;
+}
 int Cpu6502::op_ldx() { this->x = this->param8; return 0; }
 int Cpu6502::op_ldy() { }
 int Cpu6502::op_lsr() { }

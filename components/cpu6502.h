@@ -94,6 +94,18 @@ namespace components
         }
     };
 
+    enum Cpu6502Flags
+    {
+        C = 1 << 0,
+        Z = 1 << 1,
+        I = 1 << 2,
+        D = 1 << 3,
+        B = 1 << 4,
+        S = 1 << 5,
+        V = 1 << 6,
+        N = 1 << 7,
+    };
+
     class Cpu6502
     {
     public:
@@ -139,6 +151,8 @@ namespace components
         uint8_t p;
         uint8_t s;
         uint16_t pc;
+
+        void flg_set(bool set, Cpu6502Flags flag);
 
         bool is_fetching;
 
