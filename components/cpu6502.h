@@ -182,7 +182,7 @@ namespace components
         _Cpu6502_state *state_fetch_lo_hi();
         _Cpu6502_state *state_fetch_hi();
         _Cpu6502_state *check_indirect();
-        _Cpu6502_state *state_fetch_lo_hi_indirect();
+        _Cpu6502_state *state_fetch_lo_hi_indirect(uint16_t next_address);
         _Cpu6502_state *state_fetch_hi_indirect();
         _Cpu6502_state *check_fetch();
         _Cpu6502_state *state_fetch_addr();

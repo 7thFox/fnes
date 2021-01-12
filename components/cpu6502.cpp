@@ -148,10 +148,9 @@ _Cpu6502_state *Cpu6502::state_fetch_hi(){
     return this->check_indirect();
 }
 
-_Cpu6502_state *Cpu6502::state_fetch_lo_hi_indirect(){
+_Cpu6502_state *Cpu6502::state_fetch_lo_hi_indirect(uint16_t next_address){
     this->inst[1] = *this->data;
-    // page boundry bug
-    *this->address = (((*this->address & 0xFF) + 1) % 0xFF) | (this->inst[2] << 8);
+    *this->address = next_address;
     return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_hi_indirect, this));
 }
 
@@ -163,11 +162,11 @@ _Cpu6502_state *Cpu6502::state_fetch_hi_indirect() {
         this->param16 += this->y;
         if (this->param16 & 0xFF00 != this->inst[2] << 8)
         {
-            return new _Cpu6502_state(std::bind(&Cpu6502::state_wait_cycles, this, 1, 
-                new _Cpu6502_state(std::bind(&Cpu6502::state_op_exec, this))));
+            return new _Cpu6502_state(std::bind(&Cpu6502::check_fetch, this));// TODO: add another wait?
         }
+        return this->check_fetch();
     }
-    return new _Cpu6502_state(std::bind(&Cpu6502::state_op_exec, this));
+    return new _Cpu6502_state(std::bind(&Cpu6502::check_fetch, this));
 }
 _Cpu6502_state *Cpu6502::check_indirect(){
     switch (this->inst_meta.addr_mode)
@@ -185,7 +184,8 @@ _Cpu6502_state *Cpu6502::check_indirect(){
             break;
         case AddressingMode::zpgX:
             this->param16 = (this->inst[1] + this->x) & 0xFF;
-            break;
+            return new _Cpu6502_state(std::bind(&Cpu6502::check_fetch, this));// Adding a cycle for LDA zpg,X. We'll see if it carries
+            // break;
         case AddressingMode::zpgY:
             this->param16 = (this->inst[1] + this->y) & 0xFF;
             break;
@@ -208,13 +208,16 @@ _Cpu6502_state *Cpu6502::check_indirect(){
             break;
         case AddressingMode::ind:
             *this->address = this->inst[1] | (this->inst[2] << 8);
-            return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_lo_hi_indirect, this));
+            return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_lo_hi_indirect, this,
+                (this->inst[1] + 1) & 0xFF | this->inst[2] << 8));
         case AddressingMode::Xind:
             *this->address = (this->inst[1] + this->x) & 0xFF;
-            return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_lo_hi_indirect, this));
+            return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_lo_hi_indirect, this,
+                (this->inst[1] + this->x + 1) & 0xFF));
         case AddressingMode::indY:
-            *this->address = (this->inst[1] + this->x) & 0xFF;
-            return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_lo_hi_indirect, this));
+            *this->address = this->inst[1];
+            return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_lo_hi_indirect, this,
+                (this->inst[1] + 1) & 0xFF));
         case AddressingMode::rel:
             this->param16 = this->inst[1];
             if (this->param16 & 0x08)

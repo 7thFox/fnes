@@ -61,12 +61,24 @@ namespace test
     test::TestResult test_range_8(std::function<test::TestResult(uint8_t)> test_fn, uint8_t lo, uint8_t hi)
     {
         test::TestResult res;
+        test::TestResult res_partial_fail;
+        res_partial_fail.is_partial_fail = false;
         for (int i = lo; i <= hi; i++)
         {
             res = test_fn((uint8_t)i);
-            if (!res.is_passed || res.is_partial_fail){
+            if (!res.is_passed){
+                res.message += " param = " + std::to_string(i);
                 return res;
             }
+            else if (!res_partial_fail.is_partial_fail && res.is_partial_fail)
+            {
+                res.message += " param = " + std::to_string(i);
+                res_partial_fail = res;
+            }
+        }
+        if (res_partial_fail.is_partial_fail)
+        {
+            return res_partial_fail;
         }
         return res;
     }
@@ -74,28 +86,55 @@ namespace test
     test::TestResult test_range_16(std::function<test::TestResult(uint16_t)> test_fn, uint16_t lo, uint16_t hi)
     {
         test::TestResult res;
+        test::TestResult res_partial_fail;
+        res_partial_fail.is_partial_fail = false;
         for (int i = lo; i <= hi; i++)
         {
             res = test_fn((uint16_t)i);
-            if (!res.is_passed || res.is_partial_fail){
+            if (!res.is_passed){
                 return res;
             }
+            else if (!res_partial_fail.is_partial_fail && res.is_partial_fail)
+            {
+                res_partial_fail = res;
+            }
+        }
+        if (res_partial_fail.is_partial_fail){
+            return res_partial_fail;
         }
         return res;
     }
 
-    // test::TestResult test_LDA_Xind(){}
+    test::TestResult test_LDA_Xind()
+    {
+        return test_range_8([](uint8_t x) {
+            std::unordered_map<uint16_t, uint8_t> mem = {
+                {0xFFFC, 0xA1},
+                {0xFFFD, 0x53},
+                {(0x0053 + x) & 0xFF, 0x84},
+                {(0x0053 + x + 1) & 0xFF, 0x21},
+                {0x2184, 0x77}
+            };
+            return test_inst(
+                "test_LDA_Xind", &mem, 6,
+                [&](components::Cpu6502 *cpu) {
+                    return cpu->get_a() == 0x77;
+                },
+                [&](components::Cpu6502 *cpu) {
+                    cpu->test_set_x(x);
+                });
+        });
+    }
     test::TestResult test_LDA_abs()
-    {        
-        std::unordered_map<uint16_t, uint8_t> mem = 
-        {
-            {0xFFFC, 0xAD},
-        };
-
-        return test_range_16([&](uint16_t x) {
-            mem[x] = 0x69;
-            mem[0xFFFD] = x & 0xFF;
-            mem[0xFFFE] = x >> 8;
+    {
+        return test_range_16([](uint16_t x) {
+            std::unordered_map<uint16_t, uint8_t> mem = 
+            {
+                {0xFFFC, 0xAD},
+                {0xFFFD, x & 0xFF},
+                {0xFFFE, x >> 8},
+                {x, 0x69},
+            };
             return test_inst("test_LDA_abs", &mem, 4, [](components::Cpu6502 *cpu) {
                 return cpu->get_a() == 0x69;
             });
@@ -103,15 +142,13 @@ namespace test
     }
     test::TestResult test_LDA_absX()
     {
-        std::unordered_map<uint16_t, uint8_t> mem = {
-            {0xFFFC, 0xBD},
-            {0xFFFD, 0x74},
-            {0xFFFE, 0x84},
-        };
-
-        return test_range_8([&](uint8_t x) {
-            mem[0x8474 + x] = 0x21;
-
+        return test_range_8([](uint8_t x) {
+            std::unordered_map<uint16_t, uint8_t> mem = {
+                {0xFFFC, 0xBD},
+                {0xFFFD, 0x74},
+                {0xFFFE, 0x84},
+                {0x8474 + x, 0x21},
+            };
             return test_inst(
                 "test_LDA_absX", &mem,
                 (0x8474 + x) & 0xFF00 != 0x8400 ? 5 : 4, // add for page boundry
@@ -125,14 +162,13 @@ namespace test
     }
     test::TestResult test_LDA_absY()
     {
-        std::unordered_map<uint16_t, uint8_t> mem = {
-            {0xFFFC, 0xB9},
-            {0xFFFD, 0x99},
-            {0xFFFE, 0x66},
-        };
-
-        return test_range_8([&](uint8_t x) {
-            mem[0x6699 + x] = 0x88;
+        return test_range_8([](uint8_t x) {
+            std::unordered_map<uint16_t, uint8_t> mem = {
+                {0xFFFC, 0xB9},
+                {0xFFFD, 0x99},
+                {0xFFFE, 0x66},
+                {0x6699 + x, 0x88},
+            };
 
             return test_inst(
                 "test_LDA_absY", &mem,
@@ -147,34 +183,69 @@ namespace test
     }
     test::TestResult test_LDA_imm()
     {
-        std::unordered_map<uint16_t, uint8_t> mem = {
-            {0xFFFC, 0xA9},
-        };
-
-        return test_range_8([&](uint8_t x) {
-            mem[0xFFFD] = x;
+        return test_range_8([](uint8_t x) {
+            std::unordered_map<uint16_t, uint8_t> mem = {
+                {0xFFFC, 0xA9},
+                {0xFFFD, x},
+            };
             return test_inst("test_LDA_imm", &mem, 2, [&](components::Cpu6502 *cpu) {
                 return cpu->get_a() == x;
             });
         });
     }
-
-    // test::TestResult test_LDA_indY();
+    test::TestResult test_LDA_indY()
+    {
+        return test_range_8([](uint8_t x) {
+            std::unordered_map<uint16_t, uint8_t> mem = {
+                {0xFFFC, 0xB1},
+                {0xFFFD, 0x79},
+                {(0x0079) & 0xFF, 0xC3},
+                {(0x0079 + 1) & 0xFF, 0x44},
+                {0x44C3 + x, 0x9E}
+            };
+            return test_inst(
+                "test_LDA_indY", &mem, 
+                (0x44C3 + x) & 0xFF00 != 0x4400 ? 6 : 5,
+                [&](components::Cpu6502 *cpu) {
+                    return cpu->get_a() == 0x9E;
+                },
+                [&](components::Cpu6502 *cpu) {
+                    cpu->test_set_y(x);
+                });
+        });
+    }
     test::TestResult test_LDA_zpg()
     {
-        std::unordered_map<uint16_t, uint8_t> mem = {
-            {0xFFFC, 0xA5},
-        };
-
-        return test_range_8([&](uint8_t x) {
-            mem[0xFFFD] = x;
-            mem[x] = 0x38;
+        return test_range_8([&](uint8_t x) 
+        {
+            std::unordered_map<uint16_t, uint8_t> mem = {
+                {0xFFFC, 0xA5},
+                {0xFFFD, x},
+                {x, 0x38},
+            };
             return test_inst("test_LDA_zpg", &mem, 3, [&](components::Cpu6502 *cpu) {
                 return cpu->get_a() == 0x38;
             });
         });
     }
-    // test::TestResult test_LDA_zpgX();
+    test::TestResult test_LDA_zpgX()
+    {
+        return test_range_8([](uint8_t x) {
+            std::unordered_map<uint16_t, uint8_t> mem = {
+                {0xFFFC, 0xB5},
+                {0xFFFD, 0x37},
+                {(0x0037 + x) & 0xFF, 0xFD},
+            };
+            return test_inst(
+                "test_LDA_zpgX", &mem, 4,
+                [&](components::Cpu6502 *cpu) {
+                    return cpu->get_a() == 0xFD;
+                },
+                [&](components::Cpu6502 *cpu) {
+                    cpu->test_set_x(x);
+                });
+        });
+    }
 
     void run_all_instruction_tests(std::ostream& out, bool results_only){
         auto tests = {
@@ -278,14 +349,14 @@ namespace test
 
             // &test_JSR_abs,
 
-            // &test_LDA_Xind,
+            &test_LDA_Xind,
             &test_LDA_abs,
             &test_LDA_absX,
             &test_LDA_absY,
             &test_LDA_imm,
-            // &test_LDA_indY,
+            &test_LDA_indY,
             &test_LDA_zpg,
-            // &test_LDA_zpgX,
+            &test_LDA_zpgX,
 
             // &test_LDX_abs,
             // &test_LDX_absY,

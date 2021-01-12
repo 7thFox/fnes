@@ -12,6 +12,7 @@ void intHandle(int);
 #include <iostream>
 
 //#define DEBUG_OUT_NO_NCURSES
+void run_interactive();
 
 int main()
 {

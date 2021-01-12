@@ -121,14 +121,14 @@ namespace test
 
     // test::TestResult test_JSR_abs();
 
-    // test::TestResult test_LDA_Xind();
+    test::TestResult test_LDA_Xind();
     test::TestResult test_LDA_abs();
     test::TestResult test_LDA_absX();
     test::TestResult test_LDA_absY();
     test::TestResult test_LDA_imm();
-    // test::TestResult test_LDA_indY();
+    test::TestResult test_LDA_indY();
     test::TestResult test_LDA_zpg();
-    // test::TestResult test_LDA_zpgX();
+    test::TestResult test_LDA_zpgX();
 
     // test::TestResult test_LDX_abs();
     // test::TestResult test_LDX_absY();
