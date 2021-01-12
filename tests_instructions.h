@@ -7,6 +7,8 @@
 #include <functional>
 #include <unordered_map>
 #include <iostream>
+#include <chrono>
+#include <iomanip>
 
 namespace test
 {
@@ -23,11 +25,32 @@ namespace test
 
     bool check_flag(components::Cpu6502 *cpu, components::Cpu6502Flags flg, bool set);
 
+    // test::TestResult test_A
+    test::TestResult test_abs(
+        uint8_t opcode, std::string test_name, int cycles,
+        std::function<bool(components::Cpu6502*, uint8_t)> is_passed,
+        std::function<void(components::Cpu6502*)> cpu_setup = {});
+    // test::TestResult test_absX
+    // test::TestResult test_absY
+    test::TestResult test_imm(
+        uint8_t opcode, std::string test_name,
+        std::function<bool(components::Cpu6502*, uint8_t)> is_passed,
+        std::function<void(components::Cpu6502*)> cpu_setup = {});
+    // test::TestResult test_impl
+    // test::TestResult test_ind
+    // test::TestResult test_Xind
+    // test::TestResult test_indY
+    // test::TestResult test_rel
+    // test::TestResult test_zpg
+    // test::TestResult test_zpgX
+    // test::TestResult test_zpgY
+
+
     // test::TestResult test_ADC_Xind();
     // test::TestResult test_ADC_abs();
     // test::TestResult test_ADC_absX();
     // test::TestResult test_ADC_absY();
-    // test::TestResult test_ADC_imm();
+    test::TestResult test_ADC_imm();
     // test::TestResult test_ADC_indY();
     // test::TestResult test_ADC_zpg();
     // test::TestResult test_ADC_zpgX();

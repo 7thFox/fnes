@@ -279,7 +279,16 @@ _Cpu6502_state *Cpu6502::state_hlt(){
 // TODO: Remove when implemented
 #pragma GCC diagnostic ignored "-Wreturn-type"
 int Cpu6502::op____() { return 0; }
-int Cpu6502::op_adc() { this->a += this->param8; return 0; }
+int Cpu6502::op_adc() 
+{
+    auto tmp = (uint16_t)this->a + (uint16_t)this->param8;
+    this->flg_set((tmp & 0x80) == 0x80, Cpu6502Flags::N);
+    this->flg_set((tmp & 0xFF) == 0, Cpu6502Flags::Z);
+    this->flg_set(tmp > 0xFF, Cpu6502Flags::C);
+    this->flg_set((~((uint16_t)this->a ^ (uint16_t)this->param8) & ((uint16_t)this->a ^ tmp)) & 0x0080, Cpu6502Flags::V);
+    this->a = tmp;
+    return 0; 
+}
 int Cpu6502::op_and() { }
 int Cpu6502::op_asl() { }
 int Cpu6502::op_bcc() { }
@@ -312,7 +321,7 @@ int Cpu6502::op_lda()
 { 
     this->a = this->param8;
     this->flg_set(this->a == 0, Cpu6502Flags::Z);
-    this->flg_set(this->a & 0x80 == 0x80, Cpu6502Flags::N);
+    this->flg_set((this->a & 0x80) == 0x80, Cpu6502Flags::N);
     return 0;
 }
 int Cpu6502::op_ldx() { this->x = this->param8; return 0; }

@@ -110,24 +110,61 @@ namespace test
         return set == ((cpu->get_p() & flg) == flg);
     }
 
+    test::TestResult test_abs(
+        uint8_t opcode, std::string test_name, int cycles,
+        std::function<bool(components::Cpu6502*, uint8_t)> is_passed,
+        std::function<void(components::Cpu6502*)> cpu_setup)
+        {
+            auto test = [&](uint16_t abs_addr) {
+                return test_range_8([&](uint8_t value) {
+                    std::unordered_map<uint16_t, uint8_t> mem = {
+                        {0xFFFC, opcode},
+                        {0xFFFD, abs_addr & 0xFF},
+                        {0xFFFE, abs_addr >> 8},
+                        {abs_addr, value},
+                    };
+                    return test_inst(test_name, &mem, cycles, std::bind(is_passed, std::placeholders::_1, value), cpu_setup);
+                });
+            };
+            auto res = test_range_16(test, 0x0000, 0x0100);
+            if (!res.is_passed || res.is_partial_fail) return res;
+            res = test_range_16(test, 0x4000, 0x4100);
+            if (!res.is_passed || res.is_partial_fail) return res;
+            return test_range_16(test, 0xF500, 0xF600);
+        }
+    test::TestResult test_imm(
+        uint8_t opcode, std::string test_name,
+        std::function<bool(components::Cpu6502*, uint8_t)> is_passed,
+        std::function<void(components::Cpu6502*)> cpu_setup)
+        {
+            return test_range_8([&](uint8_t value) {
+                std::unordered_map<uint16_t, uint8_t> mem = {
+                    {0xFFFC, opcode},
+                    {0xFFFD, value},
+                };
+                return test_inst(test_name, &mem, 2, std::bind(is_passed, std::placeholders::_1, value), cpu_setup);
+            });
+        }
+
     // test::TestResult test_ADC_Xind();
     // test::TestResult test_ADC_abs();
     // test::TestResult test_ADC_absX();
     // test::TestResult test_ADC_absY();
-    // test::TestResult test_ADC_imm()
-    // {
-    //     return test_range_8([](uint8_t x) {
-    //         std::unordered_map<uint16_t, uint8_t> mem = {
-    //             {0xFFFC, 0x69},
-    //             {0xFFFD, x},
-    //         };
-    //         return test_inst("test_ADC_imm", &mem, 2, [&](components::Cpu6502 *cpu) {
-    //             return cpu->get_a() == (x + 0x52);
-    //         }, [](components::Cpu6502 *cpu) {
-    //             cpu->test_set_a(0x52);
-    //         });
-    //     });
-    // }
+    test::TestResult test_ADC_imm()
+    {
+        return test_range_8([](uint8_t a0) {
+            return test_imm(0x69, "test_ADC_imm", [&](components::Cpu6502 *cpu, uint8_t x) {
+                uint16_t tmp = (uint16_t)x + (uint16_t)a0;
+                return cpu->get_a() == (uint8_t)(x + a0)
+                    && check_flag(cpu, components::Cpu6502Flags::N, ((uint8_t)tmp & 0x80) == 0x80)
+                    && check_flag(cpu, components::Cpu6502Flags::Z, (uint8_t)tmp == 0)
+                    && check_flag(cpu, components::Cpu6502Flags::C, tmp > 0xFF)
+                    && check_flag(cpu, components::Cpu6502Flags::V, ((~((uint16_t)a0 ^ (uint16_t)x) & ((uint16_t)a0 ^ tmp)) & 0x0080) == 0x0080);
+            }, [&](components::Cpu6502 *cpu) {
+                cpu->test_set_a(a0);
+            });
+        });
+    }
     // test::TestResult test_ADC_indY();
     // test::TestResult test_ADC_zpg();
     // test::TestResult test_ADC_zpgX();
@@ -149,7 +186,7 @@ namespace test
                 "test_LDA_Xind", &mem, 6,
                 [&](components::Cpu6502 *cpu) {
                     return cpu->get_a() == val
-                        && check_flag(cpu, components::Cpu6502Flags::N, val & 0x80 == 0x80)
+                        && check_flag(cpu, components::Cpu6502Flags::N, (val & 0x80) == 0x80)
                         && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
                 },
                 [&](components::Cpu6502 *cpu) {
@@ -159,23 +196,28 @@ namespace test
     }
     test::TestResult test_LDA_abs()
     {
-        return test_range_16([](uint16_t x) {
-            uint8_t val = x % 7 == 0 ? 0xEE : // neg 
-                x % 2 ? 0x00 : // zero
-                0x69;// pos
-            std::unordered_map<uint16_t, uint8_t> mem = 
-            {
-                {0xFFFC, 0xAD},
-                {0xFFFD, x & 0xFF},
-                {0xFFFE, x >> 8},
-                {x, val},
-            };
-            return test_inst("test_LDA_abs", &mem, 4, [&](components::Cpu6502 *cpu) {
-                return cpu->get_a() == val
-                    && check_flag(cpu, components::Cpu6502Flags::N, val & 0x80 == 0x80)
-                    && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
-            });
-        }, 0x6748, 0x6948);
+        return test_abs(0xAD, __func__, 4, [](components::Cpu6502 *cpu, uint8_t val) {
+            return cpu->get_a() == val
+                && check_flag(cpu, components::Cpu6502Flags::N, (val & 0x80) == 0x80)
+                && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
+        });
+        // return test_range_16([](uint16_t x) {
+        //     uint8_t val = x % 7 == 0 ? 0xEE : // neg
+        //         x % 2 ? 0x00 : // zero
+        //         0x69;// pos
+        //     std::unordered_map<uint16_t, uint8_t> mem =
+        //     {
+        //         {0xFFFC, 0xAD},
+        //         {0xFFFD, x & 0xFF},
+        //         {0xFFFE, x >> 8},
+        //         {x, val},
+        //     };
+        //     return test_inst("test_LDA_abs", &mem, 4, [&](components::Cpu6502 *cpu) {
+        //         return cpu->get_a() == val
+        //             && check_flag(cpu, components::Cpu6502Flags::N, (val & 0x80) == 0x80)
+        //             && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
+        //     });
+        // }, 0x6748, 0x6948);
     }
     test::TestResult test_LDA_absX()
     {
@@ -194,7 +236,7 @@ namespace test
                 (0x8474 + x) & 0xFF00 != 0x8400 ? 5 : 4, // add for page boundry
                 [&](components::Cpu6502 *cpu) {
                     return cpu->get_a() == val
-                        && check_flag(cpu, components::Cpu6502Flags::N, val & 0x80 == 0x80)
+                        && check_flag(cpu, components::Cpu6502Flags::N, (val & 0x80) == 0x80)
                         && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
                 },
                 [&](components::Cpu6502 *cpu) {
@@ -220,7 +262,7 @@ namespace test
                 (0x6699 + x) & 0xFF00 != 0x6600 ? 5 : 4, // add for page boundry
                 [&](components::Cpu6502 *cpu) {
                     return cpu->get_a() == val
-                        && check_flag(cpu, components::Cpu6502Flags::N, val & 0x80 == 0x80)
+                        && check_flag(cpu, components::Cpu6502Flags::N, (val & 0x80) == 0x80)
                         && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
                 },
                 [&](components::Cpu6502 *cpu) {
@@ -230,16 +272,10 @@ namespace test
     }
     test::TestResult test_LDA_imm()
     {
-        return test_range_8([](uint8_t x) {
-            std::unordered_map<uint16_t, uint8_t> mem = {
-                {0xFFFC, 0xA9},
-                {0xFFFD, x},
-            };
-            return test_inst("test_LDA_imm", &mem, 2, [&](components::Cpu6502 *cpu) {
-                return cpu->get_a() == x
-                    && check_flag(cpu, components::Cpu6502Flags::N, x & 0x80 == 0x80)
-                    && check_flag(cpu, components::Cpu6502Flags::Z, x == 0);
-            });
+        return test_imm(0xA9, __func__, [](components::Cpu6502 *cpu, uint8_t x) {
+            return cpu->get_a() == x
+                && check_flag(cpu, components::Cpu6502Flags::N, (x & 0x80) == 0x80)
+                && check_flag(cpu, components::Cpu6502Flags::Z, x == 0);
         });
     }
     test::TestResult test_LDA_indY()
@@ -260,7 +296,7 @@ namespace test
                 (0x44C3 + x) & 0xFF00 != 0x4400 ? 6 : 5,
                 [&](components::Cpu6502 *cpu) {
                     return cpu->get_a() == val
-                        && check_flag(cpu, components::Cpu6502Flags::N, val & 0x80 == 0x80)
+                        && check_flag(cpu, components::Cpu6502Flags::N, (val & 0x80) == 0x80)
                         && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
                 },
                 [&](components::Cpu6502 *cpu) {
@@ -282,7 +318,7 @@ namespace test
             };
             return test_inst("test_LDA_zpg", &mem, 3, [&](components::Cpu6502 *cpu) {
                 return cpu->get_a() == val
-                    && check_flag(cpu, components::Cpu6502Flags::N, val & 0x80 == 0x80)
+                    && check_flag(cpu, components::Cpu6502Flags::N, (val & 0x80) == 0x80)
                     && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
             });
         });
@@ -302,7 +338,7 @@ namespace test
                 "test_LDA_zpgX", &mem, 4,
                 [&](components::Cpu6502 *cpu) {
                     return cpu->get_a() == val
-                        && check_flag(cpu, components::Cpu6502Flags::N, val & 0x80 == 0x80)
+                        && check_flag(cpu, components::Cpu6502Flags::N, (val & 0x80) == 0x80)
                         && check_flag(cpu, components::Cpu6502Flags::Z, val == 0);
                 },
                 [&](components::Cpu6502 *cpu) {
@@ -317,7 +353,7 @@ namespace test
             // &test_ADC_abs,
             // &test_ADC_absX,
             // &test_ADC_absY,
-            // &test_ADC_imm,
+            &test_ADC_imm,
             // &test_ADC_indY,
             // &test_ADC_zpg,
             // &test_ADC_zpgX,
@@ -523,14 +559,20 @@ namespace test
         int partial_fail = 0;
         int failed = 0;
         int count = 0;
+        double time_all = 0;
         for (auto test_fn = tests.begin(); test_fn != tests.end(); ++test_fn)
         {
             if (!results_only)
             {
                 out << "Testing " << ++count << "/" << tests.size() << "..." << std::flush;
             }
+            auto start = std::chrono::high_resolution_clock::now();
             auto result = (*test_fn)();
-            if (!results_only){
+            auto end = std::chrono::high_resolution_clock::now();
+            auto elapsed = std::chrono::duration<double, std::ratio<1>>(end - start).count();
+            time_all += elapsed;
+            if (!results_only)
+            {
                 out << "\r";
             }
 
@@ -550,6 +592,10 @@ namespace test
             }
 
             out << result.test_name << ": " << result_name;
+            if (!results_only)
+            {
+                out << " (" << std::fixed << std::setprecision(0) << elapsed * 1000 << " ms)";
+            }
             if (!result.is_passed || result.is_partial_fail){
                 out << " - " << result.message;
             }
@@ -557,6 +603,7 @@ namespace test
         }
 
         out << std::endl
+            << "Tests Complete: " << std::fixed << std::setprecision(0) << time_all * 1000 << " ms"   << std::endl
             << "--------------Test Summary--------------" << std::endl
             << " Success: " << passed << std::endl
             << " Failed: " << failed << std::endl
