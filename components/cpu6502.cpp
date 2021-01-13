@@ -81,6 +81,8 @@ void Cpu6502::test_set_y(uint8_t x) { if (this->is_testing) this->y = x; }
 void Cpu6502::test_set_p(uint8_t x) { if (this->is_testing) this->p = x; }
 void Cpu6502::test_set_s(uint8_t x) { if (this->is_testing) this->s = x; }
 void Cpu6502::test_set_pc(uint16_t x) { if (this->is_testing) this->pc = x; }
+uint16_t Cpu6502::test_get_addr() { return *this->address; }
+uint8_t Cpu6502::test_get_data() { return *this->data; }
 
 _Cpu6502_state *Cpu6502::state_wait_cycles(int ncycles, _Cpu6502_state *continue_with)
 {

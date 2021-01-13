@@ -1,4 +1,9 @@
 #include "signal.h"
+#include <cstdlib>
+#include <stdlib.h>
+#include "unistd.h"
+#include <iostream>
+#include "tests_instructions.h"
 #include "components/rom.h"
 #include "components/cpu6502.h"
 #include "windows/monitor.h"
@@ -6,18 +11,14 @@
 int running = 1;
 void intHandle(int);
 
-#include <stdlib.h>
-#include "unistd.h"
-#include "tests_instructions.h"
-#include <iostream>
-
 //#define DEBUG_OUT_NO_NCURSES
 void run_interactive();
 
 int main()
 {
+    std::srand(std::time(nullptr));
     // run_interactive();
-    test::run_all_instruction_tests(std::cout, false);
+    test::run_all_instruction_tests(&std::cout, false);
 }
 
 void run_interactive()

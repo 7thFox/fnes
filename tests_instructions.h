@@ -7,12 +7,13 @@
 #include <functional>
 #include <unordered_map>
 #include <iostream>
-#include <chrono>
 #include <iomanip>
+#include <chrono>
+#include <cstdlib>
 
 namespace test
 {
-    void run_all_instruction_tests(std::ostream& out, bool results_only);
+    void run_all_instruction_tests(std::ostream *out, bool results_only);
 
     test::TestResult test_inst(
         std::string test_name,
@@ -30,27 +31,53 @@ namespace test
         uint8_t opcode, std::string test_name, int cycles,
         std::function<bool(components::Cpu6502*, uint8_t)> is_passed,
         std::function<void(components::Cpu6502*)> cpu_setup = {});
-    // test::TestResult test_absX
-    // test::TestResult test_absY
-    test::TestResult test_imm(
-        uint8_t opcode, std::string test_name,
+    test::TestResult test_absX(
+        uint8_t opcode, std::string test_name, int cycles, int cycles_boundry,
         std::function<bool(components::Cpu6502*, uint8_t)> is_passed,
         std::function<void(components::Cpu6502*)> cpu_setup = {});
+    test::TestResult test_absY(
+        uint8_t opcode, std::string test_name, int cycles, int cycles_boundry,
+        std::function<bool(components::Cpu6502*, uint8_t)> is_passed,
+        std::function<void(components::Cpu6502*)> cpu_setup = {});
+    test::TestResult test_imm(
+        uint8_t opcode, std::string test_name,
+        std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(components::Cpu6502 *)> cpu_setup = {});
     // test::TestResult test_impl
-    // test::TestResult test_ind
-    // test::TestResult test_Xind
-    // test::TestResult test_indY
+    test::TestResult test_ind(
+        uint8_t opcode, std::string test_name, int cycles,
+        std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(components::Cpu6502 *)> cpu_setup = {});
+    test::TestResult test_Xind(
+        uint8_t opcode, std::string test_name, int cycles,
+        std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(components::Cpu6502 *)> cpu_setup = {});
+    test::TestResult test_indY(
+        uint8_t opcode, std::string test_name, int cycles, int cycles_boundry,
+        std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(components::Cpu6502 *)> cpu_setup = {});
     // test::TestResult test_rel
-    // test::TestResult test_zpg
-    // test::TestResult test_zpgX
-    // test::TestResult test_zpgY
+    test::TestResult test_zpg(
+        uint8_t opcode, std::string test_name, int cycles,
+        std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(components::Cpu6502 *)> cpu_setup = {});
+    test::TestResult test_zpgX(
+        uint8_t opcode, std::string test_name, int cycles,
+        std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(components::Cpu6502 *)> cpu_setup = {});
+    test::TestResult test_zpgY(
+        uint8_t opcode, std::string test_name, int cycles,
+        std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(components::Cpu6502 *)> cpu_setup = {});
 
-
+    void run_test(test::TestSummary *summary, std::function<test::TestResult()> test_fn);
+    void test_ADC(test::TestSummary *summary);
+    void test_LDA(test::TestSummary *summary);
     // test::TestResult test_ADC_Xind();
     // test::TestResult test_ADC_abs();
     // test::TestResult test_ADC_absX();
     // test::TestResult test_ADC_absY();
-    test::TestResult test_ADC_imm();
+    // test::TestResult test_ADC_imm();
     // test::TestResult test_ADC_indY();
     // test::TestResult test_ADC_zpg();
     // test::TestResult test_ADC_zpgX();
@@ -146,14 +173,11 @@ namespace test
 
     // test::TestResult test_JSR_abs();
 
-    test::TestResult test_LDA_Xind();
-    test::TestResult test_LDA_abs();
-    test::TestResult test_LDA_absX();
-    test::TestResult test_LDA_absY();
-    test::TestResult test_LDA_imm();
-    test::TestResult test_LDA_indY();
-    test::TestResult test_LDA_zpg();
-    test::TestResult test_LDA_zpgX();
+    // test::TestResult test_LDA_Xind();
+    // test::TestResult test_LDA_absY();
+    // test::TestResult test_LDA_indY();
+    // test::TestResult test_LDA_zpg();
+    // test::TestResult test_LDA_zpgX();
 
     // test::TestResult test_LDX_abs();
     // test::TestResult test_LDX_absY();

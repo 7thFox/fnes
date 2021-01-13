@@ -137,6 +137,8 @@ namespace components
         void test_set_p(uint8_t);
         void test_set_s(uint8_t);
         void test_set_pc(uint16_t);
+        uint16_t test_get_addr();
+        uint8_t test_get_data();
 
     private:
         bool is_testing;
