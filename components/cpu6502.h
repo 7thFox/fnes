@@ -85,12 +85,22 @@ namespace components
 
         bool has_fetch() 
         {
-            if (this->addr_mode == AddressingMode::imm ||
+            if (this->addr_mode == AddressingMode::A ||
+                this->addr_mode == AddressingMode::imm ||
                 this->addr_mode == AddressingMode::impl ||
                 this->mnemonic == "JMP"){
                 return false;
             }
             return true;
+        }
+
+        bool always_page()
+        {
+            if (this->mnemonic == "ASL")
+            {
+                return true;
+            }
+            return false;
         }
     };
 

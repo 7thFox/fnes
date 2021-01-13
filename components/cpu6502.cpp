@@ -169,9 +169,9 @@ _Cpu6502_state *Cpu6502::state_fetch_hi_indirect() {
     if (this->inst_meta.addr_mode == AddressingMode::indY)
     {
         this->param16 += this->y;
-        if (this->param16 & 0xFF00 != this->inst[2] << 8)
+        if (this->inst_meta.always_page() ||this->param16 & 0xFF00 != this->inst[2] << 8)
         {
-            return new _Cpu6502_state(std::bind(&Cpu6502::check_fetch, this));// TODO: add another wait?
+            return new _Cpu6502_state(std::bind(&Cpu6502::check_fetch, this));
         }
         return this->check_fetch();
     }
@@ -203,14 +203,14 @@ _Cpu6502_state *Cpu6502::check_indirect(){
             break;
         case AddressingMode::absX:
             this->param16 = (this->inst[1] | (this->inst[2] << 8)) + x;
-            if (this->param16 & 0xFF00 != this->inst[2] << 8)
+            if (this->inst_meta.always_page() || this->param16 & 0xFF00 != this->inst[2] << 8)
             {
                 return new _Cpu6502_state(std::bind(&Cpu6502::check_fetch, this));
             }
             break;
         case AddressingMode::absY:
             this->param16 = (this->inst[1] | (this->inst[2] << 8)) + y;
-            if (this->param16 & 0xFF00 != this->inst[2] << 8)
+            if (this->inst_meta.always_page() ||this->param16 & 0xFF00 != this->inst[2] << 8)
             {
                 return new _Cpu6502_state(std::bind(&Cpu6502::check_fetch, this));
             }
@@ -278,8 +278,6 @@ _Cpu6502_state *Cpu6502::state_hlt(){
     return new _Cpu6502_state(std::bind(&Cpu6502::state_hlt, this));
 }
 
-// TODO: Remove when implemented
-#pragma GCC diagnostic ignored "-Wreturn-type"
 int Cpu6502::op____() { return 0; }
 int Cpu6502::op_adc() 
 {
@@ -291,8 +289,23 @@ int Cpu6502::op_adc()
     this->a = tmp;
     return 0; 
 }
-int Cpu6502::op_and() { }
-int Cpu6502::op_asl() { }
+int Cpu6502::op_and()
+{ 
+    this->a &= this->param8;
+    this->flg_set(this->a == 0, Cpu6502Flags::Z);
+    this->flg_set((this->a & 0x80) == 0x80, Cpu6502Flags::N);
+    return 0;
+}
+int Cpu6502::op_asl()
+{ 
+    this->flg_set((this->param8 & 0x80) == 0x80, Cpu6502Flags::C);
+    this->a = (this->param8 << 1) & 0xFF;
+    this->flg_set(this->a == 0, Cpu6502Flags::Z);
+    this->flg_set((this->a & 0x80) == 0x80, Cpu6502Flags::N);
+    return this->inst_meta.addr_mode == AddressingMode::A ? 1 : 2;
+}
+// TODO: Remove when implemented
+#pragma GCC diagnostic ignored "-Wreturn-type"
 int Cpu6502::op_bcc() { }
 int Cpu6502::op_bcs() { }
 int Cpu6502::op_beq() { }

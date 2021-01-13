@@ -26,7 +26,10 @@ namespace test
 
     bool check_flag(components::Cpu6502 *cpu, components::Cpu6502Flags flg, bool set);
 
-    // test::TestResult test_A
+    test::TestResult test_A(
+        uint8_t opcode, std::string test_name,
+        std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(components::Cpu6502 *)> cpu_setup = {});
     test::TestResult test_abs(
         uint8_t opcode, std::string test_name, int cycles,
         std::function<bool(components::Cpu6502*, uint8_t)> is_passed,
@@ -72,207 +75,60 @@ namespace test
 
     void run_test(test::TestSummary *summary, std::function<test::TestResult()> test_fn);
     void test_ADC(test::TestSummary *summary);
+    void test_AND(test::TestSummary *summary);
+    void test_ASL(test::TestSummary *summary);
+    // void test_BCC(test::TestSummary *summary);
+    // void test_BCS(test::TestSummary *summary);
+    // void test_BEQ(test::TestSummary *summary);
+    // void test_BIT(test::TestSummary *summary);
+    // void test_BMI(test::TestSummary *summary);
+    // void test_BNE(test::TestSummary *summary);
+    // void test_BPL(test::TestSummary *summary);
+    // void test_BRK(test::TestSummary *summary);
+    // void test_BVC(test::TestSummary *summary);
+    // void test_BVS(test::TestSummary *summary);
+    // void test_CLC(test::TestSummary *summary);
+    // void test_CLD(test::TestSummary *summary);
+    // void test_CLI(test::TestSummary *summary);
+    // void test_CLV(test::TestSummary *summary);
+    // void test_CMP(test::TestSummary *summary);
+    // void test_CPX(test::TestSummary *summary);
+    // void test_CPY(test::TestSummary *summary);
+    // void test_DEC(test::TestSummary *summary);
+    // void test_DEX(test::TestSummary *summary);
+    // void test_DEY(test::TestSummary *summary);
+    // void test_EOR(test::TestSummary *summary);
+    // void test_INC(test::TestSummary *summary);
+    // void test_INX(test::TestSummary *summary);
+    // void test_INY(test::TestSummary *summary);
+    // void test_JMP(test::TestSummary *summary);
+    // void test_JSR(test::TestSummary *summary);
     void test_LDA(test::TestSummary *summary);
-    // test::TestResult test_ADC_Xind();
-    // test::TestResult test_ADC_abs();
-    // test::TestResult test_ADC_absX();
-    // test::TestResult test_ADC_absY();
-    // test::TestResult test_ADC_imm();
-    // test::TestResult test_ADC_indY();
-    // test::TestResult test_ADC_zpg();
-    // test::TestResult test_ADC_zpgX();
-
-    // test::TestResult test_AND_Xind();
-    // test::TestResult test_AND_abs();
-    // test::TestResult test_AND_absX();
-    // test::TestResult test_AND_absY();
-    // test::TestResult test_AND_imm();
-    // test::TestResult test_AND_indY();
-    // test::TestResult test_AND_zpg();
-    // test::TestResult test_AND_zpgX();
-
-    // test::TestResult test_ASL_A();
-    // test::TestResult test_ASL_abs();
-    // test::TestResult test_ASL_absX();
-    // test::TestResult test_ASL_zpg();
-    // test::TestResult test_ASL_zpgX();
-
-    // test::TestResult test_BCC_rel();
-
-    // test::TestResult test_BCS_rel();
-
-    // test::TestResult test_BEQ_rel();
-
-    // test::TestResult test_BIT_abs();
-    // test::TestResult test_BIT_zpg();
-
-    // test::TestResult test_BMI_rel();
-
-    // test::TestResult test_BNE_rel();
-
-    // test::TestResult test_BPL_rel();
-
-    // test::TestResult test_BRK_impl();
-
-    // test::TestResult test_BVC_rel();
-
-    // test::TestResult test_BVS_rel();
-
-    // test::TestResult test_CLC_impl();
-
-    // test::TestResult test_CLD_impl();
-
-    // test::TestResult test_CLI_impl();
-
-    // test::TestResult test_CLV_impl();
-
-    // test::TestResult test_CMP_Xind();
-    // test::TestResult test_CMP_abs();
-    // test::TestResult test_CMP_absX();
-    // test::TestResult test_CMP_absY();
-    // test::TestResult test_CMP_imm();
-    // test::TestResult test_CMP_indY();
-    // test::TestResult test_CMP_zpg();
-    // test::TestResult test_CMP_zpgX();
-
-    // test::TestResult test_CPX_abs();
-    // test::TestResult test_CPX_imm();
-    // test::TestResult test_CPX_zpg();
-
-    // test::TestResult test_CPY_abs();
-    // test::TestResult test_CPY_imm();
-    // test::TestResult test_CPY_zpg();
-
-    // test::TestResult test_DEC_abs();
-    // test::TestResult test_DEC_absX();
-    // test::TestResult test_DEC_zpg();
-    // test::TestResult test_DEC_zpgX();
-
-    // test::TestResult test_DEX_impl();
-
-    // test::TestResult test_DEY_impl();
-
-    // test::TestResult test_EOR_Xind();
-    // test::TestResult test_EOR_abs();
-    // test::TestResult test_EOR_absX();
-    // test::TestResult test_EOR_absY();
-    // test::TestResult test_EOR_imm();
-    // test::TestResult test_EOR_indY();
-    // test::TestResult test_EOR_zpg();
-    // test::TestResult test_EOR_zpgX();
-
-    // test::TestResult test_INC_abs();
-    // test::TestResult test_INC_absX();
-    // test::TestResult test_INC_zpg();
-    // test::TestResult test_INC_zpgX();
-    // test::TestResult test_INX_impl();
-    // test::TestResult test_INY_impl();
-
-    // test::TestResult test_JMP_abs();
-    // test::TestResult test_JMP_ind();
-
-    // test::TestResult test_JSR_abs();
-
-    // test::TestResult test_LDA_Xind();
-    // test::TestResult test_LDA_absY();
-    // test::TestResult test_LDA_indY();
-    // test::TestResult test_LDA_zpg();
-    // test::TestResult test_LDA_zpgX();
-
-    // test::TestResult test_LDX_abs();
-    // test::TestResult test_LDX_absY();
-    // test::TestResult test_LDX_imm();
-    // test::TestResult test_LDX_zpg();
-    // test::TestResult test_LDX_zpgY();
-
-    // test::TestResult test_LDY_abs();
-    // test::TestResult test_LDY_absX();
-    // test::TestResult test_LDY_imm();
-    // test::TestResult test_LDY_zpg();
-    // test::TestResult test_LDY_zpgX();
-
-    // test::TestResult test_LSR_A();
-    // test::TestResult test_LSR_abs();
-    // test::TestResult test_LSR_absX();
-    // test::TestResult test_LSR_zpg();
-    // test::TestResult test_LSR_zpgX();
-
-    // test::TestResult test_NOP_impl();
-
-    // test::TestResult test_ORA_Xind();
-    // test::TestResult test_ORA_abs();
-    // test::TestResult test_ORA_absX();
-    // test::TestResult test_ORA_absY();
-    // test::TestResult test_ORA_imm();
-    // test::TestResult test_ORA_indY();
-    // test::TestResult test_ORA_zpg();
-    // test::TestResult test_ORA_zpgX();
-
-    // test::TestResult test_PHA_impl();
-
-    // test::TestResult test_PHP_impl();
-
-    // test::TestResult test_PLA_impl();
-
-    // test::TestResult test_PLP_impl();
-
-    // test::TestResult test_ROL_A();
-    // test::TestResult test_ROL_abs();
-    // test::TestResult test_ROL_absX();
-    // test::TestResult test_ROL_zpg();
-    // test::TestResult test_ROL_zpgX();
-
-    // test::TestResult test_ROR_A();
-    // test::TestResult test_ROR_abs();
-    // test::TestResult test_ROR_absX();
-    // test::TestResult test_ROR_zpg();
-    // test::TestResult test_ROR_zpgX();
-
-    // test::TestResult test_RTI_impl();
-
-    // test::TestResult test_RTS_impl();
-
-    // test::TestResult test_SBC_Xind();
-    // test::TestResult test_SBC_abs();
-    // test::TestResult test_SBC_absX();
-    // test::TestResult test_SBC_absY();
-    // test::TestResult test_SBC_imm();
-    // test::TestResult test_SBC_indY();
-    // test::TestResult test_SBC_zpg();
-    // test::TestResult test_SBC_zpgX();
-
-    // test::TestResult test_SEC_impl();
-
-    // test::TestResult test_SED_impl();
-
-    // test::TestResult test_SEI_impl();
-
-    // test::TestResult test_STA_Xind();
-    // test::TestResult test_STA_abs();
-    // test::TestResult test_STA_absX();
-    // test::TestResult test_STA_absY();
-    // test::TestResult test_STA_indY();
-    // test::TestResult test_STA_zpg();
-    // test::TestResult test_STA_zpgX();
-
-    // test::TestResult test_STX_abs();
-    // test::TestResult test_STX_zpg();
-    // test::TestResult test_STX_zpgY();
-
-    // test::TestResult test_STY_abs();
-    // test::TestResult test_STY_zpg();
-    // test::TestResult test_STY_zpgX();
-
-    // test::TestResult test_TAX_impl();
-
-    // test::TestResult test_TAY_impl();
-
-    // test::TestResult test_TSX_impl();
-
-    // test::TestResult test_TXA_impl();
-
-    // test::TestResult test_TXS_impl();
-
-    // test::TestResult test_TYA_impl();
+    // void test_LDX(test::TestSummary *summary);
+    // void test_LDY(test::TestSummary *summary);
+    // void test_LSR(test::TestSummary *summary);
+    // void test_NOP(test::TestSummary *summary);
+    // void test_ORA(test::TestSummary *summary);
+    // void test_PHA(test::TestSummary *summary);
+    // void test_PHP(test::TestSummary *summary);
+    // void test_PLA(test::TestSummary *summary);
+    // void test_PLP(test::TestSummary *summary);
+    // void test_ROL(test::TestSummary *summary);
+    // void test_ROR(test::TestSummary *summary);
+    // void test_RTI(test::TestSummary *summary);
+    // void test_RTS(test::TestSummary *summary);
+    // void test_SBC(test::TestSummary *summary);
+    // void test_SEC(test::TestSummary *summary);
+    // void test_SED(test::TestSummary *summary);
+    // void test_SEI(test::TestSummary *summary);
+    // void test_STA(test::TestSummary *summary);
+    // void test_STX(test::TestSummary *summary);
+    // void test_STY(test::TestSummary *summary);
+    // void test_TAX(test::TestSummary *summary);
+    // void test_TAY(test::TestSummary *summary);
+    // void test_TSX(test::TestSummary *summary);
+    // void test_TXA(test::TestSummary *summary);
+    // void test_TXS(test::TestSummary *summary);
+    // void test_TYA(test::TestSummary *summary);
 }
 #endif

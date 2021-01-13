@@ -109,7 +109,24 @@ namespace test
     {
         return set == ((cpu->get_p() & flg) == flg);
     }
-
+    test::TestResult test_A(
+        uint8_t opcode, std::string test_name,
+        std::function<bool(components::Cpu6502*, uint8_t)> is_passed,
+        std::function<void(components::Cpu6502*)> cpu_setup)
+        {
+            return test_range_8([&](uint8_t a) {
+                std::unordered_map<uint16_t, uint8_t> mem = {
+                    {0xFFFC, opcode},
+                };
+                return test_inst(test_name, &mem, 2, std::bind(is_passed, std::placeholders::_1, a), 
+                    [&](components::Cpu6502 *cpu) {
+                        if (cpu_setup) {
+                            cpu_setup(cpu);
+                        }
+                        cpu->test_set_a(a);
+                    });
+            });
+        }
     test::TestResult test_abs(
         uint8_t opcode, std::string test_name, int cycles,
         std::function<bool(components::Cpu6502*, uint8_t)> is_passed,
@@ -327,6 +344,65 @@ namespace test
             });
         }
 
+    void run_all_instruction_tests(std::ostream*out, bool results_only){
+        auto groups = {
+            &test_ADC,
+            &test_AND,
+            &test_ASL,
+
+            &test_LDA,
+        };
+
+        for (auto test_group = groups.begin(); test_group != groups.end(); ++test_group)
+        {
+            test::TestSummary summary = test::TestSummary(out, results_only);
+            (*test_group)(&summary);
+            *out << std::endl;
+            summary.write_summary(*out);
+        }
+
+        *out << std::endl
+             << "All Tests Complete." << std::endl;
+    }
+
+    void run_test(test::TestSummary* summary, std::function<test::TestResult()> test_fn)
+    {
+        if (!summary->terse)
+        {
+            *summary->out << "Testing " << (summary->failed + summary->passed + summary->partial_pass + 1) << "/" << summary->total << "..." << std::flush;
+        }
+        auto start = std::chrono::high_resolution_clock::now();
+        auto result = test_fn();
+        auto end = std::chrono::high_resolution_clock::now();
+        auto elapsed = std::chrono::duration<double, std::ratio<1>>(end - start).count();
+        summary->elapsed_time += elapsed;
+
+        std::string result_name;
+        if (!result.is_passed)
+        {
+            result_name = "Failed";
+            summary->failed++;
+        }
+        else if (result.is_partial_fail){
+            result_name = "Partial Pass";
+            summary->partial_pass++;
+        }
+        else{
+            result_name = "Passed";
+            summary->passed++;
+        }
+
+        if (!summary->terse)
+        {
+            *summary->out << "\r" << result.test_name << ": " << result_name << " (" << std::fixed << std::setprecision(0) << elapsed * 1000 << " ms)";
+
+            if (!result.is_passed || result.is_partial_fail){
+                *summary->out << " - " << result.message;
+            }
+            *summary->out << std::endl;
+        }
+    }
+
     void test_ADC(test::TestSummary *summary)
     {
         summary->group_name = "ADC";
@@ -370,8 +446,164 @@ namespace test
                 std::bind(is_passed, std::placeholders::_1, std::placeholders::_2, a0), 
                 std::bind(cpu_setup, std::placeholders::_1, a0));
         });
+        run_test(summary, [&]() {
+            uint8_t a0 = std::rand() & 0xFF;
+            return test_zpg(0x65, "ADC zpg", 3,
+                std::bind(is_passed, std::placeholders::_1, std::placeholders::_2, a0), 
+                std::bind(cpu_setup, std::placeholders::_1, a0));
+        });
+        run_test(summary, [&]() {
+            uint8_t a0 = std::rand() & 0xFF;
+            return test_zpgX(0x75, "ADC zpg,X", 4,
+                std::bind(is_passed, std::placeholders::_1, std::placeholders::_2, a0), 
+                std::bind(cpu_setup, std::placeholders::_1, a0));
+        });
+        run_test(summary, [&]() {
+            uint8_t a0 = std::rand() & 0xFF;
+            return test_Xind(0x61, "ADC X,ind", 6,
+                std::bind(is_passed, std::placeholders::_1, std::placeholders::_2, a0), 
+                std::bind(cpu_setup, std::placeholders::_1, a0));
+        });
+        run_test(summary, [&]() {
+            uint8_t a0 = std::rand() & 0xFF;
+            return test_indY(0x71, "ADC ind,Y", 5, 6,
+                std::bind(is_passed, std::placeholders::_1, std::placeholders::_2, a0), 
+                std::bind(cpu_setup, std::placeholders::_1, a0));
+        });
+    } 
+    
+    void test_AND(test::TestSummary *summary)
+    {
+        summary->group_name = "AND";
+        summary->total = 8;
+
+        auto is_passed = [](components::Cpu6502 *cpu, uint8_t value, uint8_t a0) {
+            return cpu->get_a() == (value & a0)
+                && check_flag(cpu, components::Cpu6502Flags::N, ((value & a0) & 0x80) == 0x80)
+                && check_flag(cpu, components::Cpu6502Flags::Z, (value & a0) == 0);
+        };
+        auto cpu_setup = [](components::Cpu6502 *cpu, uint8_t a0) {
+            cpu->test_set_a(a0);
+        };
+
+        
+        run_test(summary, [&]() {
+            return test_range_8([&](uint8_t a0) {
+                return test_imm(0x29, "AND imm", 
+                    std::bind(is_passed, std::placeholders::_1, std::placeholders::_2, a0), 
+                    std::bind(cpu_setup, std::placeholders::_1, a0));
+            });
+        });
+        run_test(summary, [&]() {
+            uint8_t a0 = std::rand() & 0xFF;
+            return test_zpg(0x25, "AND zpg", 3,
+                std::bind(is_passed, std::placeholders::_1, std::placeholders::_2, a0), 
+                std::bind(cpu_setup, std::placeholders::_1, a0));
+        });
+        run_test(summary, [&]() {
+            uint8_t a0 = std::rand() & 0xFF;
+            return test_zpgX(0x35, "AND zpg,X", 4,
+                std::bind(is_passed, std::placeholders::_1, std::placeholders::_2, a0), 
+                std::bind(cpu_setup, std::placeholders::_1, a0));
+        });
+        run_test(summary, [&]() {
+            uint8_t a0 = std::rand() & 0xFF;
+            return test_abs(0x2D, "AND abs", 4, 
+                std::bind(is_passed, std::placeholders::_1, std::placeholders::_2, a0), 
+                std::bind(cpu_setup, std::placeholders::_1, a0));
+        });
+        run_test(summary, [&]() {
+            uint8_t a0 = std::rand() & 0xFF;
+            return test_absX(0x3D, "AND abs,X", 4, 5, 
+                std::bind(is_passed, std::placeholders::_1, std::placeholders::_2, a0), 
+                std::bind(cpu_setup, std::placeholders::_1, a0));
+        });
+        run_test(summary, [&]() {
+            uint8_t a0 = std::rand() & 0xFF;
+            return test_absY(0x39, "AND abs,Y", 4, 5, 
+                std::bind(is_passed, std::placeholders::_1, std::placeholders::_2, a0), 
+                std::bind(cpu_setup, std::placeholders::_1, a0));
+        });
+        run_test(summary, [&]() {
+            uint8_t a0 = std::rand() & 0xFF;
+            return test_Xind(0x21, "AND X,ind", 6,
+                std::bind(is_passed, std::placeholders::_1, std::placeholders::_2, a0), 
+                std::bind(cpu_setup, std::placeholders::_1, a0));
+        });
+        run_test(summary, [&]() {
+            uint8_t a0 = std::rand() & 0xFF;
+            return test_indY(0x31, "AND ind,Y", 5, 6,
+                std::bind(is_passed, std::placeholders::_1, std::placeholders::_2, a0), 
+                std::bind(cpu_setup, std::placeholders::_1, a0));
+        });
     }
-   
+
+    void test_ASL(test::TestSummary *summary)
+    {
+        summary->group_name = "ASL";
+        summary->total = 8;
+
+        auto is_passed = [](components::Cpu6502 *cpu, uint8_t value) {
+            auto expected = (value << 1) & 0xFF;
+            auto ok = cpu->get_a() == expected
+                && check_flag(cpu, components::Cpu6502Flags::N, (expected & 0x80) == 0x80)
+                && check_flag(cpu, components::Cpu6502Flags::Z, expected == 0)
+                && check_flag(cpu, components::Cpu6502Flags::C, (value & 0x80) == 0x80);
+            if (!ok){
+
+                printf("\n %d = %d (%d << 1)", cpu->get_a(), expected, value);
+                printf("\n N:%d:%d Z:%d:%d C:%d:%d \n", 
+                    cpu->get_p() & components::Cpu6502Flags::N, (expected & 0x80) == 0x80, 
+                    cpu->get_p() & components::Cpu6502Flags::Z, expected == 0, 
+                    cpu->get_p() & components::Cpu6502Flags::C, (value & 0x80) == 0x80);
+            }
+            return ok;
+        };
+
+        run_test(summary, [&]() {
+            return test_A(0x0A, "ASL A", is_passed);
+        });
+        run_test(summary, [&]() {
+            return test_zpg(0x06, "ASL zpg", 5, is_passed);
+        });
+        run_test(summary, [&]() {
+            return test_zpgX(0x16, "ASL zpg,X", 6, is_passed);
+        });
+        run_test(summary, [&]() {
+            return test_abs(0x0E, "ASL abs", 6, is_passed);
+        });
+        run_test(summary, [&]() {
+            return test_absX(0x1E, "ASL abs,X", 7, 7, is_passed);
+        });
+    }
+
+    // void test_BCC(test::TestSummary *summary);
+    // void test_BCS(test::TestSummary *summary);
+    // void test_BEQ(test::TestSummary *summary);
+    // void test_BIT(test::TestSummary *summary);
+    // void test_BMI(test::TestSummary *summary);
+    // void test_BNE(test::TestSummary *summary);
+    // void test_BPL(test::TestSummary *summary);
+    // void test_BRK(test::TestSummary *summary);
+    // void test_BVC(test::TestSummary *summary);
+    // void test_BVS(test::TestSummary *summary);
+    // void test_CLC(test::TestSummary *summary);
+    // void test_CLD(test::TestSummary *summary);
+    // void test_CLI(test::TestSummary *summary);
+    // void test_CLV(test::TestSummary *summary);
+    // void test_CMP(test::TestSummary *summary);
+    // void test_CPX(test::TestSummary *summary);
+    // void test_CPY(test::TestSummary *summary);
+    // void test_DEC(test::TestSummary *summary);
+    // void test_DEX(test::TestSummary *summary);
+    // void test_DEY(test::TestSummary *summary);
+    // void test_EOR(test::TestSummary *summary);
+    // void test_INC(test::TestSummary *summary);
+    // void test_INX(test::TestSummary *summary);
+    // void test_INY(test::TestSummary *summary);
+    // void test_JMP(test::TestSummary *summary);
+    // void test_JSR(test::TestSummary *summary);
+
     void test_LDA(test::TestSummary *summary)
     {
         summary->group_name = "LDA";
@@ -409,63 +641,30 @@ namespace test
         });
     }
 
-    void run_all_instruction_tests(std::ostream*out, bool results_only){
-        auto groups = {
-            &test_ADC,
-            &test_LDA,
-        };
-
-        for (auto test_group = groups.begin(); test_group != groups.end(); ++test_group)
-        {
-            test::TestSummary summary = test::TestSummary(out, results_only);
-            (*test_group)(&summary);
-            *out << std::endl;
-            summary.write_summary(*out);
-        }
-
-        *out << std::endl
-             << "All Tests Complete." << std::endl;
-    }
-
-    void run_test(test::TestSummary* summary, std::function<test::TestResult()> test_fn)
-    {
-        if (!summary->results_only)
-        {
-            *summary->out << "Testing " << (summary->failed + summary->passed + summary->partial_pass + 1) << "/" << summary->total << "..." << std::flush;
-        }
-        auto start = std::chrono::high_resolution_clock::now();
-        auto result = test_fn();
-        auto end = std::chrono::high_resolution_clock::now();
-        auto elapsed = std::chrono::duration<double, std::ratio<1>>(end - start).count();
-        summary->elapsed_time += elapsed;
-        if (!summary->results_only)
-        {
-            *summary->out << "\r";
-        }
-
-        std::string result_name;
-        if (!result.is_passed)
-        {
-            result_name = "Failed";
-            summary->failed++;
-        }
-        else if (result.is_partial_fail){
-            result_name = "Partial Pass";
-            summary->partial_pass++;
-        }
-        else{
-            result_name = "Passed";
-            summary->passed++;
-        }
-
-        *summary->out << result.test_name << ": " << result_name;
-        if (!summary->results_only)
-        {
-            *summary->out << " (" << std::fixed << std::setprecision(0) << elapsed * 1000 << " ms)";
-        }
-        if (!result.is_passed || result.is_partial_fail){
-            *summary->out << " - " << result.message;
-        }
-        *summary->out << std::endl;
-    }
+    // void test_LDX(test::TestSummary *summary);
+    // void test_LDY(test::TestSummary *summary);
+    // void test_LSR(test::TestSummary *summary);
+    // void test_NOP(test::TestSummary *summary);
+    // void test_ORA(test::TestSummary *summary);
+    // void test_PHA(test::TestSummary *summary);
+    // void test_PHP(test::TestSummary *summary);
+    // void test_PLA(test::TestSummary *summary);
+    // void test_PLP(test::TestSummary *summary);
+    // void test_ROL(test::TestSummary *summary);
+    // void test_ROR(test::TestSummary *summary);
+    // void test_RTI(test::TestSummary *summary);
+    // void test_RTS(test::TestSummary *summary);
+    // void test_SBC(test::TestSummary *summary);
+    // void test_SEC(test::TestSummary *summary);
+    // void test_SED(test::TestSummary *summary);
+    // void test_SEI(test::TestSummary *summary);
+    // void test_STA(test::TestSummary *summary);
+    // void test_STX(test::TestSummary *summary);
+    // void test_STY(test::TestSummary *summary);
+    // void test_TAX(test::TestSummary *summary);
+    // void test_TAY(test::TestSummary *summary);
+    // void test_TSX(test::TestSummary *summary);
+    // void test_TXA(test::TestSummary *summary);
+    // void test_TXS(test::TestSummary *summary);
+    // void test_TYA(test::TestSummary *summary);
 }

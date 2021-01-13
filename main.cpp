@@ -18,7 +18,7 @@ int main()
 {
     std::srand(std::time(nullptr));
     // run_interactive();
-    test::run_all_instruction_tests(&std::cout, false);
+    test::run_all_instruction_tests(&std::cout, true);
 }
 
 void run_interactive()
