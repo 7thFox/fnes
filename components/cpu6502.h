@@ -173,6 +173,7 @@ namespace components
         uint8_t inst[8];
         union {
             uint8_t param8;// hi byte
+            int8_t param8_signed;
             uint16_t param16;
         };
 

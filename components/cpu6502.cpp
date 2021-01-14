@@ -228,10 +228,14 @@ _Cpu6502_state *Cpu6502::check_indirect(){
             return new _Cpu6502_state(std::bind(&Cpu6502::state_fetch_lo_hi_indirect, this,
                 (this->inst[1] + 1) & 0xFF));
         case AddressingMode::rel:
-            this->param16 = this->inst[1];
-            if (this->param16 & 0x08)
-                this->param16 |= 0xFF00;
-            this->param16 += this->pc;
+            this->param8 = this->inst[1];
+            if ((this->pc + this->param8_signed) & 0xFF00 != this->pc & 0xFF00)
+            {
+                return new _Cpu6502_state(std::bind(&Cpu6502::check_fetch, this));
+            }
+            // if (this->param16 & 0x08)
+            //     this->param16 |= 0xFF00;
+            // this->param16 += this->pc;
             break;
     }
     return this->check_fetch();
@@ -304,9 +308,16 @@ int Cpu6502::op_asl()
     this->flg_set((this->a & 0x80) == 0x80, Cpu6502Flags::N);
     return this->inst_meta.addr_mode == AddressingMode::A ? 1 : 2;
 }
+int Cpu6502::op_bcc()
+{
+    if ((this->p & Cpu6502Flags::C) & Cpu6502Flags::C)
+    {
+        this->pc = (uint16_t)((this->pc + this->param8_signed) - 1);
+    }
+    return 1;
+}
 // TODO: Remove when implemented
 #pragma GCC diagnostic ignored "-Wreturn-type"
-int Cpu6502::op_bcc() { }
 int Cpu6502::op_bcs() { }
 int Cpu6502::op_beq() { }
 int Cpu6502::op_bit() { }

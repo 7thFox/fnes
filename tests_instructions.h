@@ -29,55 +29,70 @@ namespace test
     test::TestResult test_A(
         uint8_t opcode, std::string test_name,
         std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(char*, components::Cpu6502 *, uint8_t)> print_on_fail,
         std::function<void(components::Cpu6502 *)> cpu_setup = {});
     test::TestResult test_abs(
         uint8_t opcode, std::string test_name, int cycles,
-        std::function<bool(components::Cpu6502*, uint8_t)> is_passed,
-        std::function<void(components::Cpu6502*)> cpu_setup = {});
+        std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(char*, components::Cpu6502 *, uint8_t)> print_on_fail,
+        std::function<void(components::Cpu6502 *)> cpu_setup = {});
     test::TestResult test_absX(
         uint8_t opcode, std::string test_name, int cycles, int cycles_boundry,
-        std::function<bool(components::Cpu6502*, uint8_t)> is_passed,
-        std::function<void(components::Cpu6502*)> cpu_setup = {});
+        std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(char*, components::Cpu6502 *, uint8_t)> print_on_fail,
+        std::function<void(components::Cpu6502 *)> cpu_setup = {});
     test::TestResult test_absY(
         uint8_t opcode, std::string test_name, int cycles, int cycles_boundry,
-        std::function<bool(components::Cpu6502*, uint8_t)> is_passed,
-        std::function<void(components::Cpu6502*)> cpu_setup = {});
+        std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(char*, components::Cpu6502 *, uint8_t)> print_on_fail,
+        std::function<void(components::Cpu6502 *)> cpu_setup = {});
     test::TestResult test_imm(
         uint8_t opcode, std::string test_name,
         std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(char*, components::Cpu6502 *, uint8_t)> print_on_fail,
         std::function<void(components::Cpu6502 *)> cpu_setup = {});
     // test::TestResult test_impl
     test::TestResult test_ind(
         uint8_t opcode, std::string test_name, int cycles,
         std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(char*, components::Cpu6502 *, uint8_t)> print_on_fail,
         std::function<void(components::Cpu6502 *)> cpu_setup = {});
     test::TestResult test_Xind(
         uint8_t opcode, std::string test_name, int cycles,
         std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(char*, components::Cpu6502 *, uint8_t)> print_on_fail,
         std::function<void(components::Cpu6502 *)> cpu_setup = {});
     test::TestResult test_indY(
         uint8_t opcode, std::string test_name, int cycles, int cycles_boundry,
         std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(char*, components::Cpu6502 *, uint8_t)> print_on_fail,
         std::function<void(components::Cpu6502 *)> cpu_setup = {});
-    // test::TestResult test_rel
+    test::TestResult test_rel(
+        uint8_t opcode, std::string test_name,
+        std::function<bool(components::Cpu6502 *, uint16_t, int8_t)> is_passed,
+        std::function<void(char*, components::Cpu6502 *, uint16_t, int8_t)> print_on_fail,
+        std::function<void(components::Cpu6502 *)> cpu_setup = {});
     test::TestResult test_zpg(
         uint8_t opcode, std::string test_name, int cycles,
         std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(char*, components::Cpu6502 *, uint8_t)> print_on_fail,
         std::function<void(components::Cpu6502 *)> cpu_setup = {});
     test::TestResult test_zpgX(
         uint8_t opcode, std::string test_name, int cycles,
         std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(char*, components::Cpu6502 *, uint8_t)> print_on_fail,
         std::function<void(components::Cpu6502 *)> cpu_setup = {});
     test::TestResult test_zpgY(
         uint8_t opcode, std::string test_name, int cycles,
         std::function<bool(components::Cpu6502 *, uint8_t)> is_passed,
+        std::function<void(char*, components::Cpu6502 *, uint8_t)> print_on_fail,
         std::function<void(components::Cpu6502 *)> cpu_setup = {});
 
     void run_test(test::TestSummary *summary, std::function<test::TestResult()> test_fn);
     void test_ADC(test::TestSummary *summary);
     void test_AND(test::TestSummary *summary);
     void test_ASL(test::TestSummary *summary);
-    // void test_BCC(test::TestSummary *summary);
+    void test_BCC(test::TestSummary *summary);
     // void test_BCS(test::TestSummary *summary);
     // void test_BEQ(test::TestSummary *summary);
     // void test_BIT(test::TestSummary *summary);

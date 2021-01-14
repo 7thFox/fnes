@@ -14,11 +14,32 @@ void intHandle(int);
 //#define DEBUG_OUT_NO_NCURSES
 void run_interactive();
 
-int main()
+int main(int argc, char *argv[])
 {
+    bool performTest = false;
+    bool verboseTest = false;
     std::srand(std::time(nullptr));
-    // run_interactive();
-    test::run_all_instruction_tests(&std::cout, true);
+    for (int i = 0; i < argc; i++)
+    {
+        auto arg = std::string(argv[i]);
+        if (arg == "-t" || arg == "--test")
+        {
+            performTest = true;
+        }
+        else if (arg == "-v" || arg == "--verbose")
+        {
+            verboseTest = true;
+        }
+    }
+
+    if (performTest)
+    {
+        test::run_all_instruction_tests(&std::cout, !verboseTest);
+    }
+    else
+    {
+        run_interactive();
+    }
 }
 
 void run_interactive()

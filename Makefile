@@ -10,3 +10,9 @@ build: bin/
 
 run: build
 	bin/6502emu
+
+test: build
+	bin/6502emu --test
+
+testv: build
+	bin/6502emu --test --verbose
