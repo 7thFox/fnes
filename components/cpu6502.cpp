@@ -310,7 +310,15 @@ int Cpu6502::op_asl()
 }
 int Cpu6502::op_bcc()
 {
-    if ((this->p & Cpu6502Flags::C) & Cpu6502Flags::C)
+    if ((this->p & Cpu6502Flags::C) != Cpu6502Flags::C)
+    {
+        this->pc = (uint16_t)((this->pc + this->param8_signed) - 1);
+    }
+    return 1;
+}
+int Cpu6502::op_bcs() 
+{
+    if ((this->p & Cpu6502Flags::C) == Cpu6502Flags::C)
     {
         this->pc = (uint16_t)((this->pc + this->param8_signed) - 1);
     }
@@ -318,7 +326,6 @@ int Cpu6502::op_bcc()
 }
 // TODO: Remove when implemented
 #pragma GCC diagnostic ignored "-Wreturn-type"
-int Cpu6502::op_bcs() { }
 int Cpu6502::op_beq() { }
 int Cpu6502::op_bit() { }
 int Cpu6502::op_bmi() { }

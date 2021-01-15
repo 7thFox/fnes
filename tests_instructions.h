@@ -88,12 +88,14 @@ namespace test
         std::function<void(char*, components::Cpu6502 *, uint8_t)> print_on_fail,
         std::function<void(components::Cpu6502 *)> cpu_setup = {});
 
+    void test_branch(test::TestSummary *summary, uint8_t opcode, std::string name, components::Cpu6502Flags flag, bool set);
+
     void run_test(test::TestSummary *summary, std::function<test::TestResult()> test_fn);
     void test_ADC(test::TestSummary *summary);
     void test_AND(test::TestSummary *summary);
     void test_ASL(test::TestSummary *summary);
     void test_BCC(test::TestSummary *summary);
-    // void test_BCS(test::TestSummary *summary);
+    void test_BCS(test::TestSummary *summary);
     // void test_BEQ(test::TestSummary *summary);
     // void test_BIT(test::TestSummary *summary);
     // void test_BMI(test::TestSummary *summary);

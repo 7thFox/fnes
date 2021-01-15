@@ -417,6 +417,7 @@ namespace test
             &test_AND,
             &test_ASL,
             &test_BCC,
+            &test_BCS,
 
             &test_LDA,
         };
@@ -434,6 +435,39 @@ namespace test
 
         *out << std::endl
              << "All Tests Complete." << std::endl;
+    }
+
+    void test_branch(test::TestSummary *summary, uint8_t opcode, std::string name, components::Cpu6502Flags flag, bool on_set)
+    {
+        summary->group_name = name;
+        summary->total = 1;
+        
+        run_test(summary, [&]() {
+            return test_rel(opcode, name + " rel (Branch)", 
+                [](components::Cpu6502 *cpu, uint16_t origin, int8_t rel) {
+                    return cpu->get_pc() == origin + rel;
+                },
+                [&](char* buf, components::Cpu6502 *cpu, uint16_t origin, int8_t rel) {
+                    sprintf(buf, "\n PC: 0x%04x + 0x%02x = 0x%04x =? 0x%04x Flag: %d\n",
+                        origin & 0xFFFF, rel, (origin & 0xFFFF) + rel, cpu->get_pc(), cpu->get_p() & flag);
+                }, 
+                [&](components::Cpu6502 *cpu) {
+                    cpu->test_set_p(on_set ? flag : ~flag);
+                });
+        });
+        run_test(summary, [&]() {
+            return test_rel(opcode, name + " rel (Nobranch)", 
+                [](components::Cpu6502 *cpu, uint16_t origin, int8_t rel) {
+                    return cpu->get_pc() == origin + 1;
+                },
+                [&](char* buf, components::Cpu6502 *cpu, uint16_t origin, int8_t rel) {
+                    sprintf(buf, "\n PC: 0x%04x + 0x01 = 0x%04x =? 0x%04x Flag: %d\n",
+                    origin & 0xFFFF, (origin & 0xFFFF) + 0x01, cpu->get_pc(), cpu->get_p() & flag);
+                }, 
+                [&](components::Cpu6502 *cpu) {
+                    cpu->test_set_p(on_set ? ~flag : flag);
+                });
+        });
     }
 
     void run_test(test::TestSummary* summary, std::function<test::TestResult()> test_fn)
@@ -682,39 +716,15 @@ namespace test
             return test_absX(0x1E, "ASL abs,X", 7, 7, is_passed, debug);
         });
     }
-    
+
     void test_BCC(test::TestSummary *summary)
     {
-        summary->group_name = "BCC";
-        summary->total = 1;
+        test_branch(summary, 0x90, "BCC", components::Cpu6502Flags::C, false);
+    }
 
-        auto debug = [](char* buf, components::Cpu6502 *cpu, uint16_t origin, int8_t rel) {
-            sprintf(buf, "\n B:0x%04x + 0x%02x = 0x%04x =? 0x%04x C: %d\n",
-                origin & 0xFFFF, rel, (origin & 0xFFFF) + rel, cpu->get_pc(), cpu->get_p() & components::Cpu6502Flags::C);
-        };
-        
-        run_test(summary, [&]() {
-            return test_rel(0x90, "BCC rel (Branch)", 
-                [](components::Cpu6502 *cpu, uint16_t origin, int8_t rel) {
-                    return cpu->get_pc() == origin + rel;
-                }, 
-                debug, 
-                [](components::Cpu6502 *cpu) {
-                    cpu->test_set_p(components::Cpu6502Flags::C);
-                });
-        });
-        run_test(summary, [&]() {
-            return test_rel(0x90, "BCC rel (Nobranch)", 
-                [](components::Cpu6502 *cpu, uint16_t origin, int8_t rel) {
-                    // printf("\n NB:0x%04x + 0x%02x = 0x%04x =? 0x%04x C: %d\n",
-                    //     origin, 1, origin + 1, cpu->get_pc(), cpu->get_p() & components::Cpu6502Flags::C);
-                    return cpu->get_pc() == origin + 1;
-                }, 
-                debug, 
-                [](components::Cpu6502 *cpu) {
-                    cpu->test_set_p(~components::Cpu6502Flags::C);
-                });
-        });
+    void test_BCS(test::TestSummary *summary)
+    {
+        test_branch(summary, 0xB0, "BCS", components::Cpu6502Flags::C, true);
     }
 
     // void test_BCC(test::TestSummary *summary);
