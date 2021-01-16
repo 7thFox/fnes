@@ -418,20 +418,25 @@ namespace test
             &test_ASL,
             &test_BCC,
             &test_BCS,
+            &test_BEQ,
+            &test_BIT,
+            &test_BMI,
+            &test_BNE,
+            // &test_BRK,
+            &test_BPL,
+            &test_BVC,
+            &test_BVS,
 
             &test_LDA,
         };
 
-        // for (int i = 0; i < 100; i++)
-        // {
-            for (auto test_group = groups.begin(); test_group != groups.end(); ++test_group)
-            {
-                test::TestSummary summary = test::TestSummary(out, results_only);
-                (*test_group)(&summary);
-                *out << std::endl;
-                summary.write_summary(*out);
-            }
-        // }
+        for (auto test_group = groups.begin(); test_group != groups.end(); ++test_group)
+        {
+            test::TestSummary summary = test::TestSummary(out, results_only);
+            (*test_group)(&summary);
+            *out << std::endl;
+            summary.write_summary(*out);
+        }
 
         *out << std::endl
              << "All Tests Complete." << std::endl;
@@ -440,8 +445,8 @@ namespace test
     void test_branch(test::TestSummary *summary, uint8_t opcode, std::string name, components::Cpu6502Flags flag, bool on_set)
     {
         summary->group_name = name;
-        summary->total = 1;
-        
+        summary->total = 2;
+
         run_test(summary, [&]() {
             return test_rel(opcode, name + " rel (Branch)", 
                 [](components::Cpu6502 *cpu, uint16_t origin, int8_t rel) {
@@ -726,17 +731,124 @@ namespace test
     {
         test_branch(summary, 0xB0, "BCS", components::Cpu6502Flags::C, true);
     }
+    
+    void test_BEQ(test::TestSummary *summary)
+    {
+        test_branch(summary, 0xF0, "BEQ", components::Cpu6502Flags::Z, true);
+    }
 
-    // void test_BCC(test::TestSummary *summary);
-    // void test_BCS(test::TestSummary *summary);
-    // void test_BEQ(test::TestSummary *summary);
-    // void test_BIT(test::TestSummary *summary);
-    // void test_BMI(test::TestSummary *summary);
-    // void test_BNE(test::TestSummary *summary);
-    // void test_BPL(test::TestSummary *summary);
-    // void test_BRK(test::TestSummary *summary);
-    // void test_BVC(test::TestSummary *summary);
-    // void test_BVS(test::TestSummary *summary);
+    void test_BIT(test::TestSummary *summary)
+    {
+        summary->group_name = "BIT";
+        summary->total = 2;
+
+        run_test(summary, []() {
+            return test_range_8([](uint8_t a) {
+                return test_zpg(
+                    0x24, "BIT zpg", 3, [&](components::Cpu6502 *cpu, uint8_t m) {
+                        return ((cpu->get_p() & components::Cpu6502Flags::N) == components::Cpu6502Flags::N) == ((m & (1 << 7)) == (1 << 7)) &&
+                            ((cpu->get_p() & components::Cpu6502Flags::V) == components::Cpu6502Flags::V) == ((m & (1 << 6)) == (1 << 6)) &&
+                            ((cpu->get_p() & components::Cpu6502Flags::Z) == components::Cpu6502Flags::Z) == ((m & a) == 0);
+                    },
+                    [&](char* buf, components::Cpu6502 *cpu, uint8_t m) {
+                        sprintf(buf, "N: %d ?= %d V: %d ?= %d Z: %d ?= %d",
+                            cpu->get_p() & components::Cpu6502Flags::N, m & (1 << 7),
+                            cpu->get_p() & components::Cpu6502Flags::V, m & (1 << 6),
+                            cpu->get_p() & components::Cpu6502Flags::Z, m & a);
+                    },
+                    [&](components::Cpu6502 *cpu) {
+                        cpu->test_set_a(a);
+                    });
+            }, 0x00, 0x01);
+        });
+
+        run_test(summary, []() {
+            return test_range_8([](uint8_t a) {
+                return test_abs(
+                    0x2C, "BIT abs", 4, [&](components::Cpu6502 *cpu, uint8_t m) {
+                        return ((cpu->get_p() & components::Cpu6502Flags::N) == components::Cpu6502Flags::N) == ((m & (1 << 7)) == (1 << 7)) &&
+                            ((cpu->get_p() & components::Cpu6502Flags::V) == components::Cpu6502Flags::V) == ((m & (1 << 6)) == (1 << 6)) &&
+                            ((cpu->get_p() & components::Cpu6502Flags::Z) == components::Cpu6502Flags::Z) == ((m & a) == 0);
+                    },
+                    [&](char* buf, components::Cpu6502 *cpu, uint8_t m) {
+                        sprintf(buf, "N: %d ?= %d V: %d ?= %d Z: %d ?= %d",
+                            cpu->get_p() & components::Cpu6502Flags::N, m & (1 << 7),
+                            cpu->get_p() & components::Cpu6502Flags::V, m & (1 << 6),
+                            cpu->get_p() & components::Cpu6502Flags::Z, m & a);
+                    },
+                    [&](components::Cpu6502 *cpu) {
+                        cpu->test_set_a(a);
+                    });
+            }, 0x00, 0x01);
+        });
+    }
+
+    void test_BMI(test::TestSummary *summary)
+    {
+        test_branch(summary, 0x30, "BMI", components::Cpu6502Flags::N, true);
+    }
+
+    void test_BNE(test::TestSummary *summary)
+    {
+        test_branch(summary, 0xD0, "BNE", components::Cpu6502Flags::Z, false);
+    }
+    
+    void test_BPL(test::TestSummary *summary)
+    {
+        test_branch(summary, 0x10, "BPL", components::Cpu6502Flags::N, false);
+    }
+    
+    // void test_BRK(test::TestSummary *summary)
+    // {
+    //     summary->group_name = "BRK";
+    //     summary->total = 1;
+    //     run_test(summary, []() {
+    //         return test_range_8([](uint8_t s) {
+    //             uint16_t pc_irq = rand() & 0x10000;
+    //             uint16_t pc = rand() & 0xFFFA;
+    //             uint8_t p = rand() % 0x100;
+    //             std::unordered_map<uint16_t, uint8_t> mem = {
+    //                 {pc, 0x00},
+    //                 {0xFFFE, pc_irq & 0xFF},
+    //                 {0xFFFF, pc_irq >> 8},
+    //             };
+    //             return test_inst(
+    //                 "BRK", &mem, 7,
+    //                 [&](components::Cpu6502 *cpu) {
+    //                     return 
+    //                         mem[0x100 + s] == ((pc + 2) >> 8) && // hi
+    //                         mem[0x100 + s - 1] == ((pc + 2) & 0xFF) && // lo
+    //                         mem[0x100 + s - 2] == (p & components::Cpu6502Flags::B) &&
+    //                         cpu->get_s() == (s - 3) &&
+    //                         cpu->get_p() == (p & components::Cpu6502Flags::I) &&
+    //                         cpu->get_pc() == pc_irq;
+    //                 },
+    //                 [&](char* buf, components::Cpu6502 *cpu) {
+    //                     sprintf(buf, "Start | PC: 0x%04x S: 0x%02x P: 0x%02x (IRQ: 0x%04x)\n"
+    //                                  "Want  | PC: 0x%04x S: 0x%02x P: 0x%02x [S]: 0x%02x [S-1]: 0x%02x [S-2]: 0x%02x\n"
+    //                                  "Have  | PC: 0x%04x S: 0x%02x P: 0x%02x",
+    //                                  pc, s, p, pc_irq,
+    //                                  pc_irq, (s - 3) & 0xFF, p & components::Cpu6502Flags::I, pc >> 8, pc & 0xFF, p,
+    //                                  cpu->get_pc(), cpu->get_s(), cpu->get_p());
+    //                 },
+    //                 [&](components::Cpu6502 *cpu) {
+    //                     cpu->test_set_s(s);
+    //                     cpu->test_set_p(p);
+    //                 });
+    //         }, 0x03, 0xFF);
+    //     });
+    // }
+
+    void test_BVC(test::TestSummary *summary)
+    {
+        test_branch(summary, 0x50, "BVC", components::Cpu6502Flags::V, false);
+    }
+    
+    void test_BVS(test::TestSummary *summary)
+    {
+        test_branch(summary, 0x70, "BVS", components::Cpu6502Flags::V, true);
+    }
+    
     // void test_CLC(test::TestSummary *summary);
     // void test_CLD(test::TestSummary *summary);
     // void test_CLI(test::TestSummary *summary);

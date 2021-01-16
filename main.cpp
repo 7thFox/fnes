@@ -16,6 +16,8 @@ void run_interactive();
 
 int main(int argc, char *argv[])
 {
+
+    // TODO JOSH: You don't execute FFFC/FFFD, they're the PC of where you start lol
     bool performTest = false;
     bool verboseTest = false;
     std::srand(std::time(nullptr));

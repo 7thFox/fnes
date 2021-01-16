@@ -324,16 +324,64 @@ int Cpu6502::op_bcs()
     }
     return 1;
 }
+int Cpu6502::op_beq()
+{
+    if ((this->p & Cpu6502Flags::Z) == Cpu6502Flags::Z)
+    {
+        this->pc = (uint16_t)((this->pc + this->param8_signed) - 1);
+    }
+    return 1;
+}
+int Cpu6502::op_bit()
+{
+    this->flg_set((this->param8 & (1 << 7)) == (1 << 7), Cpu6502Flags::N);
+    this->flg_set((this->param8 & (1 << 6)) == (1 << 6), Cpu6502Flags::V);
+    this->flg_set((this->param8 & this->a) == 0, Cpu6502Flags::Z);
+    return 0;
+}
+int Cpu6502::op_bmi()
+{
+    if ((this->p & Cpu6502Flags::N) == Cpu6502Flags::N)
+    {
+        this->pc = (uint16_t)((this->pc + this->param8_signed) - 1);
+    }
+    return 1;
+}
+int Cpu6502::op_bne()
+{
+    if ((this->p & Cpu6502Flags::Z) != Cpu6502Flags::Z)
+    {
+        this->pc = (uint16_t)((this->pc + this->param8_signed) - 1);
+    }
+    return 1;
+}
+int Cpu6502::op_bpl()
+{
+    if ((this->p & Cpu6502Flags::N) != Cpu6502Flags::N)
+    {
+        this->pc = (uint16_t)((this->pc + this->param8_signed) - 1);
+    }
+    return 1;
+}
+int Cpu6502::op_brk() { }
+int Cpu6502::op_bvc()
+{
+    if ((this->p & Cpu6502Flags::V) != Cpu6502Flags::V)
+    {
+        this->pc = (uint16_t)((this->pc + this->param8_signed) - 1);
+    }
+    return 1;
+}
+int Cpu6502::op_bvs()
+{
+    if ((this->p & Cpu6502Flags::V) == Cpu6502Flags::V)
+    {
+        this->pc = (uint16_t)((this->pc + this->param8_signed) - 1);
+    }
+    return 1;
+}
 // TODO: Remove when implemented
 #pragma GCC diagnostic ignored "-Wreturn-type"
-int Cpu6502::op_beq() { }
-int Cpu6502::op_bit() { }
-int Cpu6502::op_bmi() { }
-int Cpu6502::op_bne() { }
-int Cpu6502::op_bpl() { }
-int Cpu6502::op_brk() { }
-int Cpu6502::op_bvc() { }
-int Cpu6502::op_bvs() { }
 int Cpu6502::op_clc() { }
 int Cpu6502::op_cld() { }
 int Cpu6502::op_cli() { }
